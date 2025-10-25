@@ -756,13 +756,13 @@ export class UserDataManager {
         }
 
         for (const [uid, user] of this.users.entries()) {
+            // Reset encounter stats only; keep captured player packet details (name, profession, fightPoint, hp/max_hp, etc.)
             user.damageStats = new StatisticData(user, "伤害");
             user.healingStats = new StatisticData(user, "治疗");
             user.takenDamage = 0;
             user.deadCount = 0;
             user.skillUsage = new Map();
-            user.attr = {}; // Reset attributes (HP, max_HP, etc.)
-            user.fightPoint = 0; // Reset fight point
+            // Intentionally do NOT reset user.attr or user.fightPoint
         }
         this.startTime = Date.now();
         this.logger.info("Statistics reset while keeping player information.");
