@@ -194,20 +194,14 @@ export function MainApp(): React.JSX.Element {
         let debounceTimer: number | null = null;
 
         const resizeIfNeeded = (width: number, height: number) => {
-            if (
-                width >= 100 &&
-                height >= 50 &&
-                width <= 2000 &&
-                height <= 1500
-            ) {
-                window.electronAPI.resizeWindowToContent("main", width, height);
-            }
+            window.electronAPI.resizeWindowToContent("main", width, height);
         };
 
         const observer = new ResizeObserver((entries) => {
             const entry = entries[0];
             if (!entry) return;
-            const cr = (entry as any).contentRect as DOMRectReadOnly;
+            const cr = entry.target.getBoundingClientRect();
+
             if (debounceTimer) window.clearTimeout(debounceTimer);
             debounceTimer = window.setTimeout(() => {
                 resizeIfNeeded(Math.ceil(cr.width), Math.ceil(cr.height));
