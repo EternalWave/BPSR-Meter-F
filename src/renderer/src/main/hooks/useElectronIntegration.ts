@@ -208,39 +208,15 @@ export function useElectronIntegration(
         (e: React.MouseEvent) => {
             if (!window.electronAPI) return;
 
-            let shouldEnableEvents = false;
-
-            if (isLocked) {
-                const essentialSelectors = [
-                    ".controls",
-                    ".control-button",
-                    ".sync-button",
-                    ".advanced-lite-btn",
-                    "#player-bars-container",
-                    ".skills-container",
-                    ".modal",
-                    ".add-to-registry-btn",
-                ];
-                shouldEnableEvents = essentialSelectors.some(
-                    (selector) =>
-                        (e.target as Element).closest(selector) !== null,
-                );
-            } else {
-                const allSelectors = [
-                    ".controls",
-                    ".drag-indicator",
-                    "#player-bars-container",
-                    ".skills-container",
-                    ".modal",
-                    ".add-to-registry-btn",
-                ];
-                shouldEnableEvents = allSelectors.some(
-                    (selector) =>
-                        (e.target as Element).closest(selector) !== null,
-                );
+            if (!isLocked) {
+                // Unlocked: keep interactive
+                enableMouseEvents(currentMouseEventsStateRef);
+                return;
             }
 
-            if (shouldEnableEvents) {
+            // Locked: only allow interactions when hovering the control bar
+            const allowed = (e.target as Element).closest('.controls') !== null;
+            if (allowed) {
                 enableMouseEvents(currentMouseEventsStateRef);
             }
         },
@@ -249,56 +225,24 @@ export function useElectronIntegration(
 
     const handleMouseOut = useCallback(
         (e: React.MouseEvent) => {
+            if (!isLocked) return; // Only manage click-through when locked
             setTimeout(() => {
-                let shouldKeepEvents = false;
                 const mouseX = e.clientX;
                 const mouseY = e.clientY;
-                const elementUnderMouse = document.elementFromPoint(
-                    mouseX,
-                    mouseY,
-                );
-
-                if (elementUnderMouse) {
-                    if (isLocked) {
-                        const essentialSelectors = [
-                            ".controls",
-                            ".control-button",
-                            ".sync-button",
-                            ".advanced-lite-btn",
-                            "#player-bars-container",
-                            ".skills-container",
-                            ".modal",
-                        ];
-                        shouldKeepEvents = essentialSelectors.some(
-                            (selector) =>
-                                elementUnderMouse.closest(selector) !== null,
-                        );
-                    } else {
-                        const allSelectors = [
-                            ".controls",
-                            ".drag-indicator",
-                            "#player-bars-container",
-                            ".skills-container",
-                            ".modal",
-                        ];
-                        shouldKeepEvents = allSelectors.some(
-                            (selector) =>
-                                elementUnderMouse.closest(selector) !== null,
-                        );
-                    }
-                }
-
-                if (!shouldKeepEvents) {
+                const el = document.elementFromPoint(mouseX, mouseY);
+                const stillOverControls = !!el && el.closest('.controls') !== null;
+                if (!stillOverControls) {
                     disableMouseEvents(currentMouseEventsStateRef, isScrolling);
                 }
-            }, 50);
+            },50);
         },
         [isLocked, isScrolling],
     );
 
     const handleMouseLeave = useCallback(() => {
+        if (!isLocked) return;
         disableMouseEvents(currentMouseEventsStateRef, isScrolling);
-    }, [isScrolling]);
+    }, [isLocked, isScrolling]);
 
     const handleWheel = useCallback((e: React.WheelEvent) => {
         const scrollableElements = [

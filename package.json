@@ -28,6 +28,7 @@
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
         "@tailwindcss/vite": "^4.1.15",
+        "active-win": "^8.2.1",
         "cap": "^0.2.1",
         "cors": "^2.8.5",
         "express": "^5.1.0",

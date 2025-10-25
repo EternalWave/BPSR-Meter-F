@@ -44,48 +44,76 @@ export interface ControlBarProps {
     onToggleSkillsScope?: () => void;
 }
 
-export function ControlBar({
-    isLocked,
-    onToggleLock,
-    onClose,
-    onDragStart,
-    viewMode,
-    onToggleViewMode,
-    onToggleSkillsMode,
-    sortColumn,
-    onSortChange,
-    showAllPlayers,
-    onToggleShowAll,
-    skillsScope,
-    onToggleSkillsScope,
-    onSync,
-    isPaused,
-    onTogglePause,
-    currentLanguage,
-    onLanguageToggle,
-    onOpenGroup,
-    onOpenHistory,
-    onZoomIn,
-    onZoomOut,
-    t,
-    visibleColumns,
-    onToggleColumn,
-}: ControlBarProps): React.JSX.Element {
-    const isNearby = viewMode === "nearby";
-    const isSkills = viewMode === "skills";
-    const [showColumnsMenu, setShowColumnsMenu] = React.useState(false);
+export function ControlBar(props: ControlBarProps): React.JSX.Element {
+    const isNearby = props.viewMode === "nearby";
+    const isSkills = props.viewMode === "skills";
+
+    // Opacity slider state and positioning
+    const [showOpacity, setShowOpacity] = React.useState(false);
+    const [opacity, setOpacity] = React.useState<number>(1);
+    const [panelPos, setPanelPos] = React.useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const opacityBtnRef = React.useRef<HTMLButtonElement | null>(null);
+
+    React.useEffect(() => {
+        try {
+            const raw = localStorage.getItem("windowOpacity");
+            let val = 1;
+            if (raw != null) {
+                const parsed = parseFloat(raw);
+                if (!Number.isNaN(parsed)) {
+                    val = Math.max(0, Math.min(1, parsed));
+                }
+            }
+            setOpacity(val);
+            document.documentElement.style.setProperty("--content-opacity", String(val));
+        } catch {
+            setOpacity(1);
+            document.documentElement.style.setProperty("--content-opacity", "1");
+        }
+    }, []);
+
+    const applyOpacity = (val: number) => {
+        const clamped = Math.max(0, Math.min(1, val));
+        setOpacity(clamped);
+        try {
+            document.documentElement.style.setProperty("--content-opacity", String(clamped));
+            localStorage.setItem("windowOpacity", String(clamped));
+        } catch {}
+    };
+
+    const updatePanelPosition = React.useCallback(() => {
+        const btn = opacityBtnRef.current;
+        if (!btn) return;
+        const r = btn.getBoundingClientRect();
+        const estimatedWidth = 180; // approximate popup width
+        const left = Math.max(8, r.right - estimatedWidth);
+        const top = r.bottom + 8;
+        setPanelPos({ top, left });
+    }, []);
+
+    React.useEffect(() => {
+        if (!showOpacity) return;
+        updatePanelPosition();
+        const onWin = () => updatePanelPosition();
+        window.addEventListener("resize", onWin);
+        window.addEventListener("scroll", onWin, true);
+        return () => {
+            window.removeEventListener("resize", onWin);
+            window.removeEventListener("scroll", onWin, true);
+        };
+    }, [showOpacity, updatePanelPosition]);
 
     return (
         <div className="controls gap-1">
             {/* Drag Indicator */}
-            <DragIndicator onDragStart={onDragStart} isLocked={isLocked} />
+            <DragIndicator onDragStart={props.onDragStart} isLocked={props.isLocked} />
 
             {/* Sync/Reset Button */}
             <button
                 id="sync-button"
                 className="sync-button"
-                onClick={onSync}
-                title={t("ui.buttons.resetStatistics")}
+                onClick={props.onSync}
+                title={props.t("ui.buttons.resetStatistics")}
             >
                 <i className="fa-solid fa-rotate-right sync-icon"></i>
             </button>
@@ -94,18 +122,18 @@ export function ControlBar({
             <button
                 id="pause-button"
                 className="control-button"
-                onClick={onTogglePause}
-                title={isPaused ? t("ui.buttons.resumeUpdates") : t("ui.buttons.pauseUpdates")}
+                onClick={props.onTogglePause}
+                title={props.isPaused ? props.t("ui.buttons.resumeUpdates") : props.t("ui.buttons.pauseUpdates")}
             >
-                <i className={`fa-solid fa-${isPaused ? "play" : "pause"}`}></i>
+                <i className={`fa-solid fa-${props.isPaused ? "play" : "pause"}`}></i>
             </button>
 
             {/* Group Button */}
             <button
                 id="group-btn"
                 className="control-button group"
-                onClick={onOpenGroup}
-                title={t("ui.buttons.openGroup")}
+                onClick={props.onOpenGroup}
+                title={props.t("ui.buttons.openGroup")}
             >
                 <i className="fa-solid fa-users"></i>
             </button>
@@ -114,12 +142,8 @@ export function ControlBar({
             <button
                 id="device-btn"
                 className="control-button advanced-lite-btn"
-                onClick={() => {
-                    if ((window as any).electronAPI && (window as any).electronAPI.openDeviceWindow) {
-                        (window as any).electronAPI.openDeviceWindow();
-                    }
-                }}
-                title={t("ui.buttons.openDevicePicker", "Select Network Device")}
+                onClick={() => (window as any).electronAPI?.openDeviceWindow?.()}
+                title={props.t("ui.buttons.openDevicePicker", "Select Network Device")}
             >
                 <i className="fa-solid fa-network-wired"></i>
             </button>
@@ -128,20 +152,30 @@ export function ControlBar({
             <button
                 id="history-btn"
                 className="control-button advanced-lite-btn"
-                onClick={onOpenHistory}
-                title={t("ui.buttons.openHistory")}
+                onClick={props.onOpenHistory}
+                title={props.t("ui.buttons.openHistory")}
             >
                 <i className="fa-solid fa-clock-rotate-left"></i>
+            </button>
+
+            {/* Settings Button */}
+            <button
+                id="settings-btn"
+                className="control-button advanced-lite-btn"
+                onClick={() => (window as any).electronAPI?.openSettingsWindow?.()}
+                title={props.t("ui.buttons.openSettings", "Settings")}
+            >
+                <i className="fa-solid fa-gear"></i>
             </button>
 
             {/* Skills View Toggle */}
             <button
                 id="skills-btn"
-                className={`control-button advanced-lite-btn ${viewMode === "skills" ? "active" : ""}`}
-                onClick={onToggleSkillsMode}
-                title={t("ui.buttons.toggleSkillsView")}
+                className={`control-button advanced-lite-btn ${props.viewMode === "skills" ? "active" : ""}`}
+                onClick={props.onToggleSkillsMode}
+                title={props.t("ui.buttons.toggleSkillsView")}
             >
-                <i className="fa-solid fa-chart-line mr-2"></i> {t("ui.controls.skills")}
+                <i className="fa-solid fa-chart-line mr-2"></i> {props.t("ui.controls.skills")}
             </button>
 
             <div className="flex gap-1 mx-auto">
@@ -150,35 +184,35 @@ export function ControlBar({
                     id="nearby-group-btn"
                     className={`control-button advanced-lite-btn`}
                     onClick={() => {
-                        if (viewMode === "skills") {
-                            onToggleSkillsScope && onToggleSkillsScope();
+                        if (props.viewMode === "skills") {
+                            props.onToggleSkillsScope && props.onToggleSkillsScope();
                         } else {
-                            onToggleViewMode();
+                            props.onToggleViewMode();
                         }
                     }}
                     title={
-                        viewMode === "nearby"
-                            ? t("ui.buttons.switchToSoloMode")
-                            : t("ui.buttons.switchToNearbyMode")
+                        props.viewMode === "nearby"
+                            ? props.t("ui.buttons.switchToSoloMode")
+                            : props.t("ui.buttons.switchToNearbyMode")
                     }
                 >
-                    {viewMode === "skills"
-                        ? skillsScope === "nearby"
-                            ? t("ui.controls.nearby")
-                            : t("ui.controls.solo")
-                        : viewMode === "nearby"
-                        ? t("ui.controls.nearby")
-                        : t("ui.controls.solo")}
+                    {props.viewMode === "skills"
+                        ? props.skillsScope === "nearby"
+                            ? props.t("ui.controls.nearby")
+                            : props.t("ui.controls.solo")
+                        : props.viewMode === "nearby"
+                        ? props.t("ui.controls.nearby")
+                        : props.t("ui.controls.solo")}
                 </button>
 
-                {/* If in skills view, hide sort and column controls */}
+                {/* If in skills view, hide sort controls */}
                 {!isSkills && (
                     <>
                         <button
                             id="sort-dmg-btn"
-                            className={`sort-button ${sortColumn === "totalDmg" ? "active" : ""}`}
-                            onClick={() => isNearby && onSortChange("totalDmg")}
-                            title={t("ui.buttons.sortDamage")}
+                            className={`sort-button ${props.sortColumn === "totalDmg" ? "active" : ""}`}
+                            onClick={() => isNearby && props.onSortChange("totalDmg")}
+                            title={props.t("ui.buttons.sortDamage")}
                             disabled={!isNearby}
                             style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
@@ -186,9 +220,9 @@ export function ControlBar({
                         </button>
                         <button
                             id="sort-tank-btn"
-                            className={`sort-button ${sortColumn === "totalDmgTaken" ? "active" : ""}`}
-                            onClick={() => isNearby && onSortChange("totalDmgTaken")}
-                            title={t("ui.buttons.sortDamageTaken")}
+                            className={`sort-button ${props.sortColumn === "totalDmgTaken" ? "active" : ""}`}
+                            onClick={() => isNearby && props.onSortChange("totalDmgTaken")}
+                            title={props.t("ui.buttons.sortDamageTaken")}
                             disabled={!isNearby}
                             style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
@@ -196,63 +230,41 @@ export function ControlBar({
                         </button>
                         <button
                             id="sort-heal-btn"
-                            className={`sort-button ${sortColumn === "totalHeal" ? "active" : ""}`}
-                            onClick={() => isNearby && onSortChange("totalHeal")}
-                            title={t("ui.buttons.sortHealing")}
+                            className={`sort-button ${props.sortColumn === "totalHeal" ? "active" : ""}`}
+                            onClick={() => isNearby && props.onSortChange("totalHeal")}
+                            title={props.t("ui.buttons.sortHealing")}
                             disabled={!isNearby}
                             style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
                             Heal
                         </button>
-                        {/* Show Top 10 / All toggle - rendered but disabled outside nearby mode */}
+                        {/* Show Top10 / All toggle - rendered but disabled outside nearby mode */}
                         <button
                             id="toggle-top10-all"
-                            className={`control-button advanced-lite-btn ${showAllPlayers ? "active" : ""}`}
-                            onClick={() => isNearby && onToggleShowAll && onToggleShowAll()}
-                            title={t("ui.buttons.toggleTop10All")}
+                            className={`control-button advanced-lite-btn ${props.showAllPlayers ? "active" : ""}`}
+                            onClick={() => isNearby && props.onToggleShowAll && props.onToggleShowAll()}
+                            title={props.t("ui.buttons.toggleTop10All")}
                             disabled={!isNearby}
                             style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
-                            {showAllPlayers ? t("ui.controls.showAll") : t("ui.controls.showTop10")}
+                            {props.showAllPlayers ? props.t("ui.controls.showAll") : props.t("ui.controls.showTop10")}
                         </button>
-                        {/* Columns toggle menu - visible and interactive except in skills (we're in !isSkills) */}
-                        <div style={{ position: "relative" }}>
-                            <button
-                                id="columns-btn"
-                                className="control-button"
-                                onClick={() => setShowColumnsMenu((s) => !s)}
-                                title={t("ui.buttons.columns")}
-                            >
-                                <i className="fa-solid fa-table-cells"></i>
-                            </button>
-                            {showColumnsMenu && visibleColumns && onToggleColumn && (
-                                <div className="columns-menu w-[calc(200px*var(--scale))]" style={{ position: "absolute", right: 0, top: "36px", background: "var(--bg-darker)", border: "1px solid var(--border)", padding: "8px", borderRadius: "4px", zIndex: 50 }}>
-                                    {Object.keys(visibleColumns).map((key) => (
-                                        <label key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            <input type="checkbox" checked={!!visibleColumns[key]} onChange={() => onToggleColumn(key)} />
-                                            <span style={{ fontSize: 12 }}>{t(`ui.stats.${key}`, key)}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
                     </>
                 )}
             </div>
 
             <div className="flex gap-1 ml-2">
-
                 {/* Zoom Controls */}
                 <div className="flex gap-1">
                     <button
                         id="zoom-out-btn"
                         className="control-button"
-                        onClick={onZoomOut}
-                        title={t("ui.buttons.zoomOut")}
-                        disabled={isLocked}
+                        onClick={props.onZoomOut}
+                        title={props.t("ui.buttons.zoomOut")}
+                        disabled={props.isLocked}
                         style={{
-                            opacity: isLocked ? 0.3 : 1,
-                            cursor: isLocked ? "not-allowed" : "pointer",
+                            opacity: props.isLocked ? 0.3 : 1,
+                            cursor: props.isLocked ? "not-allowed" : "pointer",
                         }}
                     >
                         <i className="fa-solid fa-minus"></i>
@@ -260,12 +272,12 @@ export function ControlBar({
                     <button
                         id="zoom-in-btn"
                         className="control-button"
-                        onClick={onZoomIn}
-                        title={t("ui.buttons.zoomIn")}
-                        disabled={isLocked}
+                        onClick={props.onZoomIn}
+                        title={props.t("ui.buttons.zoomIn")}
+                        disabled={props.isLocked}
                         style={{
-                            opacity: isLocked ? 0.3 : 1,
-                            cursor: isLocked ? "not-allowed" : "pointer",
+                            opacity: props.isLocked ? 0.3 : 1,
+                            cursor: props.isLocked ? "not-allowed" : "pointer",
                         }}
                     >
                         <i className="fa-solid fa-plus"></i>
@@ -276,27 +288,52 @@ export function ControlBar({
                 <button
                     id="language-btn"
                     className="control-button"
-                    onClick={onLanguageToggle}
+                    onClick={props.onLanguageToggle}
                     title={
-                        currentLanguage === "en"
+                        props.currentLanguage === "en"
                             ? "切换到中文"
                             : "Switch to English"
                     }
                 >
                     <span style={{ fontSize: "10px", fontWeight: 600 }}>
-                        {currentLanguage === "en" ? "EN" : "中"}
+                        {props.currentLanguage === "en" ? "EN" : "中"}
                     </span>
                 </button>
+
+                {/* Opacity control */}
+                <div style={{ position: "relative" }}>
+                    <button
+                        id="opacity-btn"
+                        ref={opacityBtnRef}
+                        className="control-button"
+                        onClick={() => setShowOpacity((s) => !s)}
+                        title={props.t("ui.buttons.opacity", "Window Opacity")}
+                    >
+                        <i className="fa-solid fa-eye-dropper"></i>
+                    </button>
+                    {showOpacity && (
+                        <div style={{ position: "fixed", left: panelPos.left, top: panelPos.top, background: "var(--bg-darker)", border: "1px solid var(--border)", padding: 8, borderRadius: 4, zIndex: 9999 }}>
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={opacity}
+                                onChange={(e) => applyOpacity(parseFloat(e.target.value))}
+                            />
+                        </div>
+                    )}
+                </div>
 
                 {/* Lock Button */}
                 <button
                     id="lock-button"
                     className="control-button"
-                    onClick={onToggleLock}
-                    title={isLocked ? t("ui.buttons.unlockWindow") : t("ui.buttons.lockWindow")}
+                    onClick={props.onToggleLock}
+                    title={props.isLocked ? props.t("ui.buttons.unlockWindow") : props.t("ui.buttons.lockWindow")}
                 >
                     <i
-                        className={`fa-solid fa-${isLocked ? "lock" : "lock-open"}`}
+                        className={`fa-solid fa-${props.isLocked ? "lock" : "lock-open"}`}
                     ></i>
                 </button>
 
@@ -304,12 +341,12 @@ export function ControlBar({
                 <button
                     id="close-button"
                     className="control-button"
-                    onClick={onClose}
-                    title={t("ui.buttons.close")}
+                    onClick={props.onClose}
+                    title={props.t("ui.buttons.close")}
                     style={{
-                        opacity: isLocked ? 0.3 : 1,
-                        cursor: isLocked ? "not-allowed" : "pointer",
-                        pointerEvents: isLocked ? "none" : "auto",
+                        opacity: props.isLocked ? 0.3 : 1,
+                        cursor: props.isLocked ? "not-allowed" : "pointer",
+                        pointerEvents: props.isLocked ? "none" : "auto",
                     }}
                 >
                     <i className="fa-solid fa-xmark"></i>

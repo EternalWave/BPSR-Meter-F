@@ -12,7 +12,6 @@ import { resetStatistics } from "../shared/api";
 import type { ViewMode, SortColumn, SortDirection } from "../shared/types";
 
 export function MainApp(): React.JSX.Element {
-
     const [viewMode, setViewMode] = useState<ViewMode>("nearby");
     const [sortColumn, setSortColumn] = useState<SortColumn>("totalDmg");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -44,6 +43,26 @@ export function MainApp(): React.JSX.Element {
         } catch (err) {
             console.warn("Failed to load visibleColumns from localStorage", err);
         }
+    }, []);
+
+    // Listen for changes made from other windows (settings) and update immediately
+    useEffect(() => {
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === "visibleColumns" || e.key === "visibleColumnsUpdateMarker") {
+                try {
+                    const raw = localStorage.getItem("visibleColumns");
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === "object") {
+                        setVisibleColumns((prev) => ({ ...prev, ...parsed }));
+                    }
+                } catch (err) {
+                    console.warn("Failed to apply visibleColumns from storage", err);
+                }
+            }
+        };
+        window.addEventListener("storage", onStorage);
+        return () => window.removeEventListener("storage", onStorage);
     }, []);
 
     // Hooks
@@ -213,6 +232,8 @@ export function MainApp(): React.JSX.Element {
             onMouseLeave={handleMouseLeave}
             onWheel={handleWheel}
         >
+            {/* Always render the background and control bar */}
+            <div className="dps-bg" />
             <ControlBar
                 isLocked={isLocked}
                 onToggleLock={toggleLock}
@@ -249,6 +270,7 @@ export function MainApp(): React.JSX.Element {
                 t={t}
             />
 
+            {/* Main content (conditionally rendered) */}
             {isLoading ? (
                 <LoadingIndicator
                     message={t(

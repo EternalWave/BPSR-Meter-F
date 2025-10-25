@@ -9,7 +9,7 @@
     --text-secondary: #b4bcc9;
     --text-muted: #6c7a89;
     --border: rgba(255, 255, 255, 0.08);
-    --border-hover: rgba(74, 158, 255, 0.3);
+    --border-hover: rgba(74,158,255,0.3);
     --gap-xs: 2px;
     --gap-sm: 4px;
     --gap-md: 6px;
@@ -19,6 +19,36 @@
     --radius-sm: 3px;
     --transition: 0.2s ease;
     --scale: 1;
+    --content-opacity: 1;
+}
+
+.dps-meter {
+    position: relative;
+}
+
+.dps-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-dark);
+    border-radius: inherit;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--content-opacity);
+    transition: opacity 0.15s ease;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.dps-meter > :not(.controls):not(.dps-bg) {
+    opacity: var(--content-opacity);
+    transition: opacity 0.15s ease;
+    z-index: 1;
+}
+
+.controls {
+    opacity: 1;
+    position: relative;
+    z-index: 2;
 }
 
 body {
@@ -62,6 +92,7 @@ body {
     flex-shrink: 0;
     position: relative;
     z-index: 2;
+    -webkit-app-region: drag;
 }
 
 .control-button {
@@ -78,6 +109,7 @@ body {
     transition: all var(--transition);
     font-size: 10px;
     pointer-events: auto;
+    -webkit-app-region: no-drag;
 }
 
 .control-button:hover {
@@ -104,6 +136,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    -webkit-app-region: no-drag;
 }
 
 .sort-button:hover {
@@ -175,6 +208,7 @@ body {
     color: var(--text-secondary);
     font-size: 10px;
     pointer-events: auto;
+    -webkit-app-region: no-drag;
 }
 
 .sync-button:hover {
@@ -547,58 +581,32 @@ body {
     border-color: var(--border-hover);
 }
 
-/* Make the device control bar look like the main window's control bar */
-.device-app .controls {
-    background: var(--bg-darker);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    padding: 6px 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    pointer-events: all;
+/* Draggable region setup: only the grip is draggable */
+.controls {
+ /* remove global drag region to avoid conflicts */
+ -webkit-app-region: no-drag;
 }
-
-.device-app .controls .drag-indicator {
-    width: 20px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    cursor: move;
-    pointer-events: auto;
+.drag-indicator {
+ -webkit-app-region: drag;
+ cursor: move;
 }
-
-.device-app .controls .drag-indicator:hover {
-    color: var(--accent-primary);
-}
-
-.device-app .controls .title {
-    font-weight: 700;
-    color: var(--text-primary);
-    font-size: 13px;
-}
-
-.device-app .controls .control-button {
-    min-width: 28px;
-    height: 28px;
-    padding: 0 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.device-app .controls .control-button:hover {
-    background: var(--accent-primary);
-    color: var(--text-primary);
-    border-color: var(--accent-primary);
-}
-
-.device-app .controls .close-button {
-    background: rgba(255,255,255,0.03);
+/* Buttons and interactive controls must not start a drag */
+.control-button,
+.sync-button,
+#zoom-in-btn,
+#zoom-out-btn,
+#language-btn,
+#lock-button,
+#close-button,
+#skills-btn,
+#group-btn,
+#device-btn,
+#history-btn,
+#columns-btn,
+#opacity-btn,
+#nearby-group-btn,
+.sort-button {
+ -webkit-app-region: no-drag;
 }
 
 .stat-value[data-tooltip]::after {
@@ -1118,10 +1126,30 @@ body {
     height: calc(800px * var(--scale));
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+.history-window::before {
+    content: "";
+    position: absolute;
+    inset:0;
+    background: var(--bg-dark);
+    border-radius: var(--radius);
+    border:1px solid var(--border);
+    backdrop-filter: blur(8px);
+    opacity:1;
+    pointer-events: none;
+    z-index:0;
+}
+.history-window > * {
+    position: relative;
+    z-index:1;
 }
 
 .history-window .controls {
     flex-shrink: 0;
+    background: var(--bg-darker);
+    border-radius: var(--radius);
+    border:1px solid var(--border);
 }
 
 .history-window .drag-indicator {
@@ -1516,3 +1544,69 @@ body {
     background: linear-gradient(90deg, var(--primary), rgba(108, 99, 255, 0.6));
     transition: width 0.3s ease;
 }
+
+/* Transparency enforcement and correct background layering */
+html, body { background: transparent !important; }
+.dps-meter { background: transparent !important; }
+.dps-bg { opacity: var(--content-opacity) !important; }
+.dps-meter > :not(.controls):not(.dps-bg) { opacity: var(--content-opacity) !important; }
+.controls { opacity:1 !important; }
+/* Ensure content wrappers don’t bring their own background when opacity is0 */
+.skills-container, .skills-message, .player-bar, .history-container {
+ background-color: rgba(0,0,0,0.0);
+}
+
+/* Settings window styling parity */
+.settings-app {
+ width:560px;
+ background: linear-gradient(180deg, rgba(8,12,18,0.85), rgba(6,8,12,0.9));
+ border:1px solid rgba(255,255,255,0.06);
+ padding:18px;
+ border-radius:10px;
+ box-shadow:08px30px rgba(0,0,0,0.6), inset01px0 rgba(255,255,255,0.02);
+ color: var(--text-primary);
+ pointer-events: all;
+ backdrop-filter: blur(6px) saturate(120%);
+}
+
+.settings-app .group-window { 
+ background: rgba(255,255,255,0.02);
+ border-radius: var(--radius);
+ border:1px solid var(--border);
+ padding:12px;
+ margin-top:12px;
+}
+
+.settings-app .group-title {
+ font-weight:700;
+ color: var(--text-primary);
+ font-size:13px;
+}
+
+/* History window glass background to match group window */
+.history-window {
+ position: relative;
+}
+.history-window::before {
+ content: "";
+ position: absolute;
+ inset:0;
+ background: var(--bg-dark);
+ border-radius: var(--radius);
+ border:1px solid var(--border);
+ backdrop-filter: blur(8px);
+ opacity:1;
+ pointer-events: none;
+ z-index:0;
+}
+.history-window > * {
+ position: relative;
+ z-index:1;
+}
+
+/* Ensure the history header matches the control bar style */
+.history-window .controls {
+ background: var(--bg-darker);
+ border-radius: var(--radius);
+ border:1px solid var(--border);
+ }

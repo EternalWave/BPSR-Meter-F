@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 export interface UseWindowControlsOptions {
     baseWidth: number;
     baseHeight: number;
-    windowType: "main" | "group" | "history" | "device";
+    windowType: "main" | "group" | "history" | "device" | "settings";
 }
 
 export interface UseWindowControlsReturn {
@@ -164,7 +164,7 @@ export function useWindowControls(
     // Handle window close
     const handleClose = useCallback(() => {
         if (window.electronAPI) {
-            window.close();
+            window.electronAPI.closeWindow();
         }
     }, []);
 
