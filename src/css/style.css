@@ -1912,3 +1912,16 @@ html, body { background: transparent !important; }
 .sb-table th { color: var(--text-secondary); text-transform: none; font-weight:700; font-size:11px; }
 .sb-table tbody tr:hover { background: rgba(74,158,255,0.08); }
 .sb-skill-name { font-weight:600; color: var(--text-primary); }
+
+/* Skill Breakdown top grid with charts */
+.sb-top-grid { display: grid; grid-template-columns:300px1fr1fr; gap:12px; margin-bottom:12px; }
+.sb-left-col { display: flex; flex-direction: column; gap:12px; }
+.sb-chart-card svg { display: block; }
+.sb-legend { display: flex; flex-direction: column; gap:4px; font-size:11px; color: var(--text-secondary); }
+.sb-legend-item { display: flex; align-items: center; gap:6px; }
+.sb-dot { width:10px; height:10px; border-radius:50%; display: inline-block; border:1px solid rgba(0,0,0,0.3); }
+.sb-legend-name { max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width:1024px) {
+ .sb-top-grid { grid-template-columns:1fr; }
+}
