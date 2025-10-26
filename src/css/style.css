@@ -1889,3 +1889,26 @@ html, body { background: transparent !important; }
 .history-window > * { position: relative; z-index:1; }
 /* Ensure the history header matches the control bar style */
 .history-window .controls { background: var(--bg-darker); border-radius: var(--radius); border:1px solid var(--border); }
+
+/* Skill Breakdown modal enhanced layout */
+.sb-summary-grid { display: grid; grid-template-columns:1fr1fr; gap:12px; margin-bottom:12px; }
+.sb-card { background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius: var(--radius); padding:10px; }
+.sb-card-title { font-size:12px; font-weight:700; color: var(--text-primary); margin-bottom:8px; }
+.sb-card-metrics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:6px12px; }
+.sb-card-metrics .sb-k { font-size:10px; color: var(--text-secondary); margin-right:6px; }
+.sb-card-metrics .sb-v { font-size:12px; font-weight:700; color: var(--text-primary); }
+.sb-dist-row { display: grid; grid-template-columns:72px1fr auto; align-items: center; gap:8px; margin:6px0; }
+.sb-dist-bar { height:8px; background: rgba(255,255,255,0.06); border-radius:4px; overflow: hidden; border:1px solid rgba(255,255,255,0.08); }
+.sb-dist-fill { height:100%; border-radius:4px; }
+.sb-dist-fill.normal { background: linear-gradient(90deg, rgba(180,180,200,0.8), rgba(150,150,180,0.8)); }
+.sb-dist-fill.crit { background: linear-gradient(90deg, rgba(255,107,122,0.9), rgba(220,53,69,0.8)); }
+.sb-dist-fill.lucky { background: linear-gradient(90deg, rgba(95,194,126,0.9), rgba(40,167,69,0.8)); }
+.sb-dist-fill.critlucky { background: linear-gradient(90deg, rgba(255,189,89,0.9), rgba(255,159,67,0.85)); }
+
+.sb-table-wrap { margin-top:10px; border:1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sb-table { width:100%; border-collapse: collapse; background: rgba(255,255,255,0.02); }
+.sb-table thead { background: rgba(255,255,255,0.04); }
+.sb-table th, .sb-table td { padding:8px10px; border-bottom:1px solid var(--border); font-size:12px; text-align: left; }
+.sb-table th { color: var(--text-secondary); text-transform: none; font-weight:700; font-size:11px; }
+.sb-table tbody tr:hover { background: rgba(74,158,255,0.08); }
+.sb-skill-name { font-weight:600; color: var(--text-primary); }

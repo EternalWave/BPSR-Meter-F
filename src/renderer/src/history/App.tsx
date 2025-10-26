@@ -151,6 +151,7 @@ export function HistoryApp(): React.JSX.Element {
                 getPlayerName={getPlayerName}
                 translateSkill={translateSkill}
                 t={t}
+                sessionDurationMs={summary ? summary.duration : undefined}
             />
         </div>
     );
