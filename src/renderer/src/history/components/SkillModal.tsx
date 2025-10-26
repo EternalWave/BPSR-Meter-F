@@ -267,7 +267,8 @@ export function SkillModal({
         const s = polarToCartesian(cx, cy, r, start);
         const e = polarToCartesian(cx, cy, r, end);
         const largeArc = end - start <= Math.PI ? 0 : 1;
-        return `M ${cx} ${cy} L ${s.x} ${s.y} A ${r} ${r}0 ${largeArc}1 ${e.x} ${e.y} Z`;
+        // M cx cy L sx sy A r r0 largeArc1 ex ey Z
+        return `M ${cx} ${cy} L ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 1 ${e.x} ${e.y} Z`;
     };
 
     return (
