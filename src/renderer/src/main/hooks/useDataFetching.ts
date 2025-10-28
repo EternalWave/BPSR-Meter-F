@@ -99,7 +99,6 @@ export interface UseDataFetchingReturn {
     isPaused: boolean;
     togglePause: () => Promise<void>;
     startTime: number; // server session start time (may reflect zone change)
-    encounterStartTime?: number | null; // starts when combat activity begins (any combat data)
 }
 
 export function useDataFetching(
@@ -120,42 +119,9 @@ export function useDataFetching(
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isPaused, setIsPaused] = useState<boolean>(false);
     const [startTime, setStartTime] = useState<number>(Date.now());
-    const [encounterStartTime, setEncounterStartTime] = useState<number | null>(
-        null,
-    );
 
     const lastStartTimeRef = useRef<number>(0);
     const lastTotalDamageRef = useRef<number>(0);
-    // kept for potential future use, but no longer gates timer start
-    const prevAggRef = useRef<{
-        init: boolean;
-        dmg: number;
-        heal: number;
-        taken: number;
-        skillMetric: number;
-    }>({
-        init: false,
-        dmg:0,
-        heal:0,
-        taken:0,
-        skillMetric:0,
-    });
-
-    const prevLocalRef = useRef<{
-        uid: number | null;
-        init: boolean;
-        dmg: number;
-        heal: number;
-        taken: number;
-        skillMetric: number;
-    }>({
-        uid: null,
-        init: false,
-        dmg:0,
-        heal:0,
-        taken:0,
-        skillMetric:0,
-    });
 
     useEffect(() => {
         const syncPauseState = async () => {
@@ -211,8 +177,7 @@ export function useDataFetching(
                         Object.keys(skillsDataRes.data.skills).length ===0,
                     );
 
-                    // Determine local uid for skills view
-                    let currentLocalUid: number | null = null;
+                    // Determine local uid for skills view (optional)
                     try {
                         const localUserResponse = await fetch("/api/solo-user");
                         const localUserData = await localUserResponse.json();
@@ -220,26 +185,14 @@ export function useDataFetching(
                             localUserData.user &&
                             Object.keys(localUserData.user).length >0
                         ) {
-                            currentLocalUid = parseInt(
+                            const currentLocalUid = parseInt(
                                 Object.keys(localUserData.user)[0],
                                 10,
                             );
                             setLocalUid(currentLocalUid);
                         }
-                    } catch (err) {}
+                    } catch {}
 
-                    // If any skill data shows combat (any damage or count), start timer if not started
-                    if (!encounterStartTime) {
-                        const hasCombat = Object.values(skillsDataRes.data.skills || {}).some(
-                            (u: any) =>
-                                Object.values(u.skills || {}).some(
-                                    (sk: any) => (sk.totalDamage ||0) >0 || (sk.totalCount ||0) >0,
-                                ),
-                        );
-                        if (hasCombat) {
-                            setEncounterStartTime(Date.now());
-                        }
-                    }
                 } else {
                     setSkillsData(null);
                     setIsLoading(true);
@@ -260,67 +213,38 @@ export function useDataFetching(
                 userData.startTime &&
                 userData.startTime !== lastStartTimeRef.current
             ) {
-                console.log("Server reset detected. Clearing local encounter start.");
+                // Reset encounter and baselines on server reset
                 lastStartTimeRef.current = userData.startTime;
                 lastTotalDamageRef.current =0;
-                setEncounterStartTime(null); // do not start automatically on reset
-                prevAggRef.current = { init: false, dmg:0, heal:0, taken:0, skillMetric:0 }; // re-init aggregates
-                prevLocalRef.current = { uid: null, init: false, dmg:0, heal:0, taken:0, skillMetric:0 }; // reset local aggregates
                 onServerReset?.();
             }
 
-            let userArray: PlayerUser[] = Object.entries(userData.user).map(
+            let userArray: PlayerUser[] = Object.entries(userData.user || {}).map(
                 ([uid, data]: [string, any]) => ({
                     ...data,
                     uid: parseInt(uid,10),
                 }),
             );
 
-            userArray = userArray.filter(
-                (u: PlayerUser) =>
-                    (u.total_damage && u.total_damage.total >0) ||
-                    u.taken_damage >0 ||
-                    (u.total_healing && u.total_healing.total >0),
-            );
-
-            if (
-                manualGroupState &&
-                manualGroupState.enabled &&
-                manualGroupState.members &&
-                manualGroupState.members.length >0
-            ) {
-                const groupUids = manualGroupState.members;
-                userArray = userArray.filter((u: PlayerUser) =>
-                    groupUids.includes(String(u.uid)),
-                );
-                console.log(
-                    `Manual group filter applied: ${userArray.length} players in group`,
-                );
-            }
-
+            // If no users yet, keep waiting
             if (!userArray || userArray.length ===0) {
                 setPlayers([]);
                 setIsLoading(true);
                 return;
             }
 
+            // Keep all players; compute combat totals from raw numbers
             setIsLoading(false);
 
             const sumaTotalDamage = userArray.reduce(
                 (acc: number, u: PlayerUser) =>
-                    acc +
-                    (u.total_damage && u.total_damage.total
-                        ? Number(u.total_damage.total)
-                        :0),
+                    acc + (u.total_damage?.total ? Number(u.total_damage.total) :0),
                 0,
             );
 
             const sumTotalHealing = userArray.reduce(
                 (acc: number, u: PlayerUser) =>
-                    acc +
-                    (u.total_healing && u.total_healing.total
-                        ? Number(u.total_healing.total)
-                        :0),
+                    acc + (u.total_healing?.total ? Number(u.total_healing.total) :0),
                 0,
             );
 
@@ -329,85 +253,36 @@ export function useDataFetching(
                 0,
             );
 
-            // Start timer once combat data is received (any damage/heal/taken)
-            if (!encounterStartTime) {
-                const totalCombat = sumaTotalDamage + sumTotalHealing + sumTaken;
-                if (totalCombat >0) {
-                    setEncounterStartTime(Date.now());
-                }
-            }
-
-            // Determine or refresh local uid
-            let currentLocalUid: number | null = null;
-            if (viewMode === "solo") {
-                const uidKey = Object.keys(userData.user)[0];
-                currentLocalUid = uidKey ? parseInt(uidKey,10) : null;
-            } else {
-                try {
-                    const localUserResponse = await fetch("/api/solo-user");
-                    const localUserData = await localUserResponse.json();
-                    if (
-                        localUserData.user &&
-                        Object.keys(localUserData.user).length >0
-                    ) {
-                        currentLocalUid = parseInt(
-                            Object.keys(localUserData.user)[0],
-                            10,
-                        );
-                    }
-                } catch (err) {
-                    console.log("Could not get local user:", err);
-                }
-            }
-
-            setLocalUid(currentLocalUid);
-
             if (sumaTotalDamage !== lastTotalDamageRef.current) {
                 lastTotalDamageRef.current = sumaTotalDamage;
             }
 
+            // compute percentages safely
             userArray.forEach((u: PlayerUser) => {
-                const userDamage =
-                    u.total_damage && u.total_damage.total
-                        ? Number(u.total_damage.total)
-                        : 0;
-                u.damagePercent =
-                    sumaTotalDamage >0
-                        ? Math.max(
-                              0,
-                              Math.min(
-                                  100,
-                                  (userDamage / sumaTotalDamage) *100,
-                              ),
-                          )
-                        : 0;
+                const userDamage = u.total_damage?.total ? Number(u.total_damage.total) :0;
+                u.damagePercent = sumaTotalDamage >0
+                    ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) *100))
+                    :0;
             });
 
             sortUserArray(userArray, sortColumn, sortDirection);
 
+            // Nearby view: optionally limit to top10 + local
             let finalArray = userArray;
-            if (viewMode === "nearby") {
-                if (showAllPlayers) {
-                    finalArray = userArray;
-                } else {
-                    const top10 = userArray.slice(0,10);
-                    const isLocalInTop10 = currentLocalUid
-                        ? top10.some((u: PlayerUser) => u.uid === currentLocalUid)
-                        : false;
-
-                    if (userArray.length >10 && !isLocalInTop10 && currentLocalUid) {
-                        const localUserExtra = userArray.find(
-                            (u: PlayerUser) => u.uid === currentLocalUid,
-                        );
-                        if (localUserExtra) {
-                            finalArray = [...top10, localUserExtra];
-                        } else {
-                            finalArray = top10;
-                        }
-                    } else {
-                        finalArray = top10;
+            if (viewMode === "nearby" && !showAllPlayers) {
+                const top10 = userArray.slice(0,10);
+                let list = top10;
+                try {
+                    const localUserResponse = await fetch("/api/solo-user");
+                    const localUserData = await localUserResponse.json();
+                    const localKey = localUserData.user ? Object.keys(localUserData.user)[0] : undefined;
+                    const localId = localKey ? parseInt(localKey,10) : undefined;
+                    if (localId && !top10.some((u) => u.uid === localId)) {
+                        const extra = userArray.find((u) => u.uid === localId);
+                        if (extra) list = [...top10, extra];
                     }
-                }
+                } catch {}
+                finalArray = list;
             }
 
             setPlayers(finalArray);
@@ -423,7 +298,7 @@ export function useDataFetching(
         manualGroupState,
         onServerReset,
         showAllPlayers,
-        encounterStartTime,
+        isPaused,
     ]);
 
     useInterval(fetchData, isPaused ? null :50);
@@ -436,7 +311,6 @@ export function useDataFetching(
         isPaused,
         togglePause,
         startTime,
-        encounterStartTime,
     };
 }
 
@@ -458,12 +332,8 @@ function sortUserArray(
                 bVal = Number(b.taken_damage) ||0;
                 break;
             case "totalHeal":
-                aVal = a.total_healing?.total
-                    ? Number(a.total_healing.total)
-                    :0;
-                bVal = b.total_healing?.total
-                    ? Number(b.total_healing.total)
-                    :0;
+                aVal = a.total_healing?.total ? Number(a.total_healing.total) :0;
+                bVal = b.total_healing?.total ? Number(b.total_healing.total) :0;
                 break;
             case "realtimeDps":
                 aVal = Number(a.total_dps) ||0;
