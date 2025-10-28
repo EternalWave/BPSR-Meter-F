@@ -126,6 +126,36 @@ export function useDataFetching(
 
     const lastStartTimeRef = useRef<number>(0);
     const lastTotalDamageRef = useRef<number>(0);
+    // track previous aggregates overall and for the local player
+    const prevAggRef = useRef<{
+        init: boolean;
+        dmg: number;
+        heal: number;
+        taken: number;
+        skillMetric: number;
+    }>({
+        init: false,
+        dmg: 0,
+        heal: 0,
+        taken: 0,
+        skillMetric: 0,
+    });
+
+    const prevLocalRef = useRef<{
+        uid: number | null;
+        init: boolean;
+        dmg: number;
+        heal: number;
+        taken: number;
+        skillMetric: number;
+    }>({
+        uid: null,
+        init: false,
+        dmg: 0,
+        heal: 0,
+        taken: 0,
+        skillMetric: 0,
+    });
 
     useEffect(() => {
         const syncPauseState = async () => {
@@ -181,22 +211,8 @@ export function useDataFetching(
                         Object.keys(skillsDataRes.data.skills).length === 0,
                     );
 
-                    // Start encounter only on first real skill activity
-                    if (!encounterStartTime) {
-                        const hasSkillActivity = Object.values(
-                            skillsDataRes.data.skills || {},
-                        ).some((user: any) =>
-                            Object.values(user.skills || {}).some(
-                                (s: any) =>
-                                    (s.totalDamage || 0) > 0 ||
-                                    (s.totalCount || 0) > 0,
-                            ),
-                        );
-                        if (hasSkillActivity) {
-                            setEncounterStartTime(Date.now());
-                        }
-                    }
-
+                    // Determine local uid for skills view
+                    let currentLocalUid: number | null = null;
                     try {
                         const localUserResponse = await fetch("/api/solo-user");
                         const localUserData = await localUserResponse.json();
@@ -204,13 +220,52 @@ export function useDataFetching(
                             localUserData.user &&
                             Object.keys(localUserData.user).length > 0
                         ) {
-                            const currentLocalUid = parseInt(
+                            currentLocalUid = parseInt(
                                 Object.keys(localUserData.user)[0],
                                 10,
                             );
                             setLocalUid(currentLocalUid);
                         }
-                    } catch (err) {
+                    } catch (err) {}
+
+                    // Compute aggregate metric for delta detection (LOCAL ONLY if available)
+                    let skillMetric = 0;
+                    if (
+                        currentLocalUid &&
+                        skillsDataRes.data.skills[String(currentLocalUid)]
+                    ) {
+                        const sUser = skillsDataRes.data.skills[String(currentLocalUid)];
+                        const totals = Object.values(sUser.skills || {}).reduce(
+                            (acc: { dmg: number; cnt: number }, sk: any) => ({
+                                dmg: acc.dmg + (sk.totalDamage || 0),
+                                cnt: acc.cnt + (sk.totalCount || 0),
+                            }),
+                            { dmg: 0, cnt: 0 },
+                        );
+                        skillMetric = totals.dmg + totals.cnt;
+                    }
+
+                    // Baseline on first tick for local user
+                    if (currentLocalUid) {
+                        if (
+                            !prevLocalRef.current.init ||
+                            prevLocalRef.current.uid !== currentLocalUid
+                        ) {
+                            prevLocalRef.current = {
+                                uid: currentLocalUid,
+                                init: true,
+                                dmg: 0,
+                                heal: 0,
+                                taken: 0,
+                                skillMetric,
+                            };
+                        } else if (
+                            !encounterStartTime &&
+                            skillMetric > prevLocalRef.current.skillMetric
+                        ) {
+                            setEncounterStartTime(Date.now());
+                        }
+                        prevLocalRef.current.skillMetric = skillMetric;
                     }
                 } else {
                     setSkillsData(null);
@@ -236,6 +291,8 @@ export function useDataFetching(
                 lastStartTimeRef.current = userData.startTime;
                 lastTotalDamageRef.current = 0;
                 setEncounterStartTime(null); // do not start automatically on reset
+                prevAggRef.current = { init: false, dmg: 0, heal: 0, taken: 0, skillMetric: 0 }; // re-init aggregates
+                prevLocalRef.current = { uid: null, init: false, dmg: 0, heal: 0, taken: 0, skillMetric: 0 }; // reset local aggregates
                 onServerReset?.();
             }
 
@@ -299,35 +356,7 @@ export function useDataFetching(
                 0,
             );
 
-            // Start encounter timer on first activity after reset
-            if (!encounterStartTime) {
-                const activityTotal = sumaTotalDamage + sumTotalHealing + sumTaken;
-                if (activityTotal > 0) {
-                    setEncounterStartTime(Date.now());
-                }
-            }
-
-            if (sumaTotalDamage !== lastTotalDamageRef.current) {
-                lastTotalDamageRef.current = sumaTotalDamage;
-            }
-
-            userArray.forEach((u: PlayerUser) => {
-                const userDamage =
-                    u.total_damage && u.total_damage.total
-                        ? Number(u.total_damage.total)
-                        : 0;
-                u.damagePercent =
-                    sumaTotalDamage > 0
-                        ? Math.max(
-                              0,
-                              Math.min(
-                                  100,
-                                  (userDamage / sumaTotalDamage) * 100,
-                              ),
-                          )
-                        : 0;
-            });
-
+            // Determine or refresh local uid
             let currentLocalUid: number | null = null;
             if (viewMode === "solo") {
                 const uidKey = Object.keys(userData.user)[0];
@@ -352,7 +381,73 @@ export function useDataFetching(
 
             setLocalUid(currentLocalUid);
 
-            sortUserArray(userArray, sortColumn, sortDirection);
+            // Local player aggregates
+            if (currentLocalUid) {
+                const me = userArray.find((u) => u.uid === currentLocalUid);
+                const myDmg = me?.total_damage?.total ? Number(me.total_damage.total) : 0;
+                const myHeal = me?.total_healing?.total ? Number(me.total_healing.total) : 0;
+                const myTaken = me?.taken_damage ? Number(me.taken_damage) : 0;
+
+                if (
+                    !prevLocalRef.current.init ||
+                    prevLocalRef.current.uid !== currentLocalUid
+                ) {
+                    prevLocalRef.current = {
+                        uid: currentLocalUid,
+                        init: true,
+                        dmg: myDmg,
+                        heal: myHeal,
+                        taken: myTaken,
+                        skillMetric: prevLocalRef.current.skillMetric,
+                    };
+                } else if (!encounterStartTime) {
+                    // Start only when local player's numbers increase
+                    if (
+                        myDmg > prevLocalRef.current.dmg ||
+                        myHeal > prevLocalRef.current.heal ||
+                        myTaken > prevLocalRef.current.taken
+                    ) {
+                        setEncounterStartTime(Date.now());
+                    }
+                }
+
+                // update local baselines
+                prevLocalRef.current.dmg = myDmg;
+                prevLocalRef.current.heal = myHeal;
+                prevLocalRef.current.taken = myTaken;
+            }
+
+            // Initialize previous aggregates on first run to avoid false start from historical totals
+            if (!prevAggRef.current.init) {
+                prevAggRef.current = {
+                    init: true,
+                    dmg: sumaTotalDamage,
+                    heal: sumTotalHealing,
+                    taken: sumTaken,
+                    skillMetric: prevAggRef.current.skillMetric,
+                };
+            }
+
+            if (sumaTotalDamage !== lastTotalDamageRef.current) {
+                lastTotalDamageRef.current = sumaTotalDamage;
+            }
+
+            userArray.forEach((u: PlayerUser) => {
+                const userDamage =
+                    u.total_damage && u.total_damage.total
+                        ? Number(u.total_damage.total)
+                        : 0;
+                u.damagePercent =
+                    sumaTotalDamage > 0
+                        ? Math.max(
+                              0,
+                              Math.min(
+                                  100,
+                                  (userDamage / sumaTotalDamage) * 100,
+                              ),
+                          )
+                        : 0;
+            });
 
             let finalArray = userArray;
             if (viewMode === "nearby") {

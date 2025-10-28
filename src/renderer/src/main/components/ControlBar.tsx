@@ -124,7 +124,8 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
         };
     }, [showOpacity, updatePanelPosition]);
 
-    const elapsed = props.encounterStartTime ? Date.now() - props.encounterStartTime : 0;
+    const elapsed = props.encounterStartTime ? Date.now() - props.encounterStartTime :0;
+    const timerDisplay = props.encounterStartTime ? `⏱ ${formatElapsed(elapsed)}` : "⏱ --:--";
 
     return (
         <div className="controls gap-1">
@@ -205,9 +206,9 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
             <div
                 className="encounter-timer"
                 title={props.t("ui.labels.encounterTimer", "Encounter time (starts on combat)")}
-                style={{ fontSize: 11, color: "var(--text-secondary)", margin: "08px" }}
+                style={{ fontSize:11, color: "var(--text-secondary)", margin: "08px" }}
             >
-                ⏱ {formatElapsed(elapsed)}
+                {timerDisplay}
             </div>
 
             <div className="flex gap-1 mx-auto">
