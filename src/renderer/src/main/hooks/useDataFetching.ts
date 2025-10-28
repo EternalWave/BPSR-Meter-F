@@ -98,7 +98,8 @@ export interface UseDataFetchingReturn {
     isLoading: boolean;
     isPaused: boolean;
     togglePause: () => Promise<void>;
-    startTime: number;
+    startTime: number; // server session start time (may reflect zone change)
+    encounterStartTime?: number | null; // starts when combat activity begins
 }
 
 export function useDataFetching(
@@ -119,6 +120,9 @@ export function useDataFetching(
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isPaused, setIsPaused] = useState<boolean>(false);
     const [startTime, setStartTime] = useState<number>(Date.now());
+    const [encounterStartTime, setEncounterStartTime] = useState<number | null>(
+        null,
+    );
 
     const lastStartTimeRef = useRef<number>(0);
     const lastTotalDamageRef = useRef<number>(0);
@@ -177,6 +181,22 @@ export function useDataFetching(
                         Object.keys(skillsDataRes.data.skills).length === 0,
                     );
 
+                    // Start encounter only on first real skill activity
+                    if (!encounterStartTime) {
+                        const hasSkillActivity = Object.values(
+                            skillsDataRes.data.skills || {},
+                        ).some((user: any) =>
+                            Object.values(user.skills || {}).some(
+                                (s: any) =>
+                                    (s.totalDamage || 0) > 0 ||
+                                    (s.totalCount || 0) > 0,
+                            ),
+                        );
+                        if (hasSkillActivity) {
+                            setEncounterStartTime(Date.now());
+                        }
+                    }
+
                     try {
                         const localUserResponse = await fetch("/api/solo-user");
                         const localUserData = await localUserResponse.json();
@@ -203,13 +223,19 @@ export function useDataFetching(
             const response = await fetch(apiEndpoint);
             const userData = await response.json();
 
+            // remember server session start (may change on zone/server reset)
+            if (userData.startTime) {
+                setStartTime(userData.startTime);
+            }
+
             if (
                 userData.startTime &&
                 userData.startTime !== lastStartTimeRef.current
             ) {
-                console.log("Server reset detected. Clearing local state.");
+                console.log("Server reset detected. Clearing local encounter start.");
                 lastStartTimeRef.current = userData.startTime;
                 lastTotalDamageRef.current = 0;
+                setEncounterStartTime(null); // do not start automatically on reset
                 onServerReset?.();
             }
 
@@ -258,6 +284,28 @@ export function useDataFetching(
                         : 0),
                 0,
             );
+
+            const sumTotalHealing = userArray.reduce(
+                (acc: number, u: PlayerUser) =>
+                    acc +
+                    (u.total_healing && u.total_healing.total
+                        ? Number(u.total_healing.total)
+                        : 0),
+                0,
+            );
+
+            const sumTaken = userArray.reduce(
+                (acc: number, u: PlayerUser) => acc + (Number(u.taken_damage) || 0),
+                0,
+            );
+
+            // Start encounter timer on first activity after reset
+            if (!encounterStartTime) {
+                const activityTotal = sumaTotalDamage + sumTotalHealing + sumTaken;
+                if (activityTotal > 0) {
+                    setEncounterStartTime(Date.now());
+                }
+            }
 
             if (sumaTotalDamage !== lastTotalDamageRef.current) {
                 lastTotalDamageRef.current = sumaTotalDamage;
@@ -337,7 +385,15 @@ export function useDataFetching(
             setPlayers([]);
             setIsLoading(true);
         }
-    }, [viewMode, sortColumn, sortDirection, manualGroupState, onServerReset]);
+    }, [
+        viewMode,
+        sortColumn,
+        sortDirection,
+        manualGroupState,
+        onServerReset,
+        showAllPlayers,
+        encounterStartTime,
+    ]);
 
     useInterval(fetchData, isPaused ? null : 50);
 
@@ -349,6 +405,7 @@ export function useDataFetching(
         isPaused,
         togglePause,
         startTime,
+        encounterStartTime,
     };
 }
 

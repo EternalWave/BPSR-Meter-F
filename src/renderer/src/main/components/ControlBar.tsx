@@ -36,12 +36,26 @@ export interface ControlBarProps {
     onZoomIn: () => void;
     onZoomOut: () => void;
 
+    // Encounter timer
+    startTime?: number; // session start (unused for display now)
+    encounterStartTime?: number | null; // first combat activity time
+
     // Translations
     t: (key: string, fallback?: string | null) => string;
     visibleColumns?: Record<string, boolean>;
     onToggleColumn?: (key: string) => void;
     skillsScope?: "solo" | "nearby";
     onToggleSkillsScope?: () => void;
+}
+
+function formatElapsed(ms: number): string {
+    if (!Number.isFinite(ms) || ms <= 0) return "00:00";
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
 export function ControlBar(props: ControlBarProps): React.JSX.Element {
@@ -53,6 +67,13 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
     const [opacity, setOpacity] = React.useState<number>(1);
     const [panelPos, setPanelPos] = React.useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const opacityBtnRef = React.useRef<HTMLButtonElement | null>(null);
+
+    // tick each second to refresh timer
+    const [, setTick] = React.useState(0);
+    React.useEffect(() => {
+        const id = window.setInterval(() => setTick((x) => x + 1), 1000);
+        return () => window.clearInterval(id);
+    }, []);
 
     React.useEffect(() => {
         try {
@@ -102,6 +123,8 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
             window.removeEventListener("scroll", onWin, true);
         };
     }, [showOpacity, updatePanelPosition]);
+
+    const elapsed = props.encounterStartTime ? Date.now() - props.encounterStartTime : 0;
 
     return (
         <div className="controls gap-1">
@@ -177,6 +200,15 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
             >
                 <i className="fa-solid fa-chart-line mr-2"></i> {props.t("ui.controls.skills")}
             </button>
+
+            {/* Encounter timer */}
+            <div
+                className="encounter-timer"
+                title={props.t("ui.labels.encounterTimer", "Encounter time (starts on combat)")}
+                style={{ fontSize: 11, color: "var(--text-secondary)", margin: "08px" }}
+            >
+                ⏱ {formatElapsed(elapsed)}
+            </div>
 
             <div className="flex gap-1 mx-auto">
                 {/* Nearby/Solo Toggle */}

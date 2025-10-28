@@ -261,6 +261,8 @@ export function MainApp(): React.JSX.Element {
                         console.warn("Failed to persist visibleColumns to localStorage", e);
                     }
                 }}
+                startTime={startTime}
+                encounterStartTime={startTime}
                 t={t}
             />
 
