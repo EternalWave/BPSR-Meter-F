@@ -68,7 +68,7 @@ export function useElectronIntegration(
     useEffect(() => {
         if (!window.electronAPI) return;
 
-        // Initialize with mouse events enabled
+        // Set initial interactive state
         window.electronAPI.setIgnoreMouseEvents(false);
         currentMouseEventsStateRef.current = false;
         console.log("Initial state: Mouse events ENABLED (UI is interactive)");
@@ -79,6 +79,35 @@ export function useElectronIntegration(
             updateClickThroughState(locked, currentMouseEventsStateRef);
         });
     }, []);
+
+    // In locked mode, use global mousemove to re-enable input when cursor is over control bar
+    useEffect(() => {
+        if (!window.electronAPI) return;
+
+        const onMouseMove = (e: MouseEvent) => {
+            if (!isLocked) return; // only when locked
+            const controls = document.querySelector('.controls') as HTMLElement | null;
+            if (!controls) return;
+            const rect = controls.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            const inside = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+            if (inside) {
+                // Ensure UI is interactive over controls
+                enableMouseEvents(currentMouseEventsStateRef);
+            } else if (!isScrolling && !isDragging) {
+                // Outside controls: keep click-through
+                disableMouseEvents(currentMouseEventsStateRef, isScrolling);
+            }
+        };
+
+        if (isLocked) {
+            window.addEventListener('mousemove', onMouseMove, { passive: true });
+        }
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove as any);
+        };
+    }, [isLocked, isDragging, isScrolling]);
 
     // Toggle lock
     const toggleLock = useCallback(() => {
@@ -234,7 +263,7 @@ export function useElectronIntegration(
                 if (!stillOverControls) {
                     disableMouseEvents(currentMouseEventsStateRef, isScrolling);
                 }
-            },50);
+            }, 50);
         },
         [isLocked, isScrolling],
     );

@@ -19,7 +19,8 @@
  --radius-sm:3px;
  --transition:0.2s ease;
  --scale:1;
- --content-opacity:1;
+ /* Only background opacity should be adjustable */
+ --bg-opacity:1;
 }
 
 .dps-meter {
@@ -33,14 +34,15 @@
  border-radius: inherit;
  z-index:0;
  pointer-events: none;
- opacity: var(--content-opacity);
+ opacity: var(--bg-opacity);
  transition: opacity0.15s ease;
  backdrop-filter: blur(8px);
  border:1px solid rgba(255,255,255,0.02);
 }
 
 .dps-meter > :not(.controls):not(.dps-bg) {
- opacity: var(--content-opacity);
+ /* Keep statistics/content fully opaque */
+ opacity:1;
  transition: opacity0.15s ease;
  z-index:1;
 }
@@ -1837,8 +1839,8 @@ body {
 /* Transparency enforcement and correct background layering */
 html, body { background: transparent !important; }
 .dps-meter { background: transparent !important; }
-.dps-bg { opacity: var(--content-opacity) !important; }
-.dps-meter > :not(.controls):not(.dps-bg) { opacity: var(--content-opacity) !important; }
+.dps-bg { opacity: var(--bg-opacity) !important; }
+.dps-meter > :not(.controls):not(.dps-bg) { opacity:1 !important; }
 .controls { opacity:1 !important; }
 /* Ensure content wrappers don’t bring their own background when opacity is0 */
 .skills-container, .skills-message, .player-bar, .history-container {

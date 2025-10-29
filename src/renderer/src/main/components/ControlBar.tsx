@@ -93,10 +93,10 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                 }
             }
             setOpacity(val);
-            document.documentElement.style.setProperty("--content-opacity", String(val));
+            document.documentElement.style.setProperty("--bg-opacity", String(val));
         } catch {
             setOpacity(1);
-            document.documentElement.style.setProperty("--content-opacity", "1");
+            document.documentElement.style.setProperty("--bg-opacity", "1");
         }
     }, []);
 
@@ -104,7 +104,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
         const clamped = Math.max(0, Math.min(1, val));
         setOpacity(clamped);
         try {
-            document.documentElement.style.setProperty("--content-opacity", String(clamped));
+            document.documentElement.style.setProperty("--bg-opacity", String(clamped));
             localStorage.setItem("windowOpacity", String(clamped));
         } catch {}
     };

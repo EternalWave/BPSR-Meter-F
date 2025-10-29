@@ -9,6 +9,11 @@ import type { UserDataManager } from '../src/server/dataManager';
 
 const TRANSLATIONS_DIR = path.join(__dirname, "translations");
 const monsterNames = JSON.parse(fs.readFileSync(TRANSLATIONS_DIR + "/zh.json", "utf-8")).monsters;
+// Custom overrides for known mob IDs
+const customMonsterNames: Record<number, string> = {
+10: "Rin",
+75: "Training Dummy",
+};
 
 class BinaryReader {
     public buffer: Buffer;
@@ -658,7 +663,8 @@ class PacketProcessor {
                 }
                 case AttrType.AttrId: {
                     const attrId = reader.int32();
-                    const name = monsterNames[attrId];
+                    // Prefer custom overrides, fallback to translations
+                    const name = customMonsterNames[attrId] || monsterNames[attrId];
                     if (name) {
                         this.logger.info(`Found moster name ${name} for id ${enemyUid}`);
                         this.userDataManager.enemyCache.name.set(enemyUid as any, name);
