@@ -100,6 +100,14 @@ export function MainApp(): React.JSX.Element {
         isPaused,
         togglePause,
         startTime,
+        lastPausedAt,
+        totalPausedMs,
+        encounterStartTime,
+        pausedBaselineMs,
+        activeBossId,
+        activeBossName,
+        activeEnemyId,
+        activeEnemyName,
     } = useDataFetching({
         viewMode,
         sortColumn,
@@ -261,6 +269,15 @@ export function MainApp(): React.JSX.Element {
                         console.warn("Failed to persist visibleColumns to localStorage", e);
                     }
                 }}
+                startTime={startTime}
+                lastPausedAt={lastPausedAt}
+                totalPausedMs={totalPausedMs}
+                encounterStartTime={encounterStartTime}
+                pausedBaselineMs={pausedBaselineMs}
+                activeBossId={activeBossId}
+                activeBossName={activeBossName}
+                activeEnemyId={activeEnemyId}
+                activeEnemyName={activeEnemyName}
                 t={t}
             />
 

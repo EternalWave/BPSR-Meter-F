@@ -36,12 +36,33 @@ export interface ControlBarProps {
     onZoomIn: () => void;
     onZoomOut: () => void;
 
+    // Timer inputs
+    startTime?: number;
+    lastPausedAt?: number | null;
+    totalPausedMs?: number;
+    encounterStartTime?: number | null;
+    pausedBaselineMs?: number; // totalPausedMs snapshot when encounter started
+    activeBossId?: number | null;
+    activeBossName?: string | null;
+    activeEnemyId?: number | null;
+    activeEnemyName?: string | null;
+
     // Translations
     t: (key: string, fallback?: string | null) => string;
     visibleColumns?: Record<string, boolean>;
     onToggleColumn?: (key: string) => void;
     skillsScope?: "solo" | "nearby";
     onToggleSkillsScope?: () => void;
+}
+
+function formatElapsed(ms: number): string {
+    if (!Number.isFinite(ms) || ms <=0) return "00:00";
+    const total = Math.floor(ms /1000);
+    const h = Math.floor(total /3600);
+    const m = Math.floor((total %3600) /60);
+    const s = total %60;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return h >0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
 export function ControlBar(props: ControlBarProps): React.JSX.Element {
@@ -51,13 +72,20 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
     // Opacity slider state and positioning
     const [showOpacity, setShowOpacity] = React.useState(false);
     const [opacity, setOpacity] = React.useState<number>(1);
-    const [panelPos, setPanelPos] = React.useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [panelPos, setPanelPos] = React.useState<{ top: number; left: number }>({ top:0, left:0 });
     const opacityBtnRef = React.useRef<HTMLButtonElement | null>(null);
+
+    // Tick each second so timer refreshes
+    const [, setTick] = React.useState(0);
+    React.useEffect(() => {
+        const id = window.setInterval(() => setTick((x) => x +1),1000);
+        return () => window.clearInterval(id);
+    }, []);
 
     React.useEffect(() => {
         try {
             const raw = localStorage.getItem("windowOpacity");
-            let val = 1;
+            let val =1;
             if (raw != null) {
                 const parsed = parseFloat(raw);
                 if (!Number.isNaN(parsed)) {
@@ -85,9 +113,9 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
         const btn = opacityBtnRef.current;
         if (!btn) return;
         const r = btn.getBoundingClientRect();
-        const estimatedWidth = 180; // approximate popup width
+        const estimatedWidth =180; // approximate popup width
         const left = Math.max(8, r.right - estimatedWidth);
-        const top = r.bottom + 8;
+        const top = r.bottom +8;
         setPanelPos({ top, left });
     }, []);
 
@@ -102,6 +130,23 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
             window.removeEventListener("scroll", onWin, true);
         };
     }, [showOpacity, updatePanelPosition]);
+
+    // Compute encounter timer if started; otherwise show placeholder
+    const startedAt = props.encounterStartTime ?? null;
+    const pausedBaseline = props.pausedBaselineMs ??0;
+    const totalPaused = props.totalPausedMs ??0;
+    const pausedDeltaSinceStart = Math.max(0, totalPaused - pausedBaseline);
+    const timeAnchor = props.isPaused && props.lastPausedAt ? props.lastPausedAt : Date.now();
+    const encounterElapsed = startedAt ? Math.max(0, timeAnchor - startedAt - pausedDeltaSinceStart) :0;
+    const timerDisplay = startedAt ? `⏱ ${formatElapsed(encounterElapsed)}` : "⏱ --:--";
+
+    // Boss label: always show ID when present, then optional name
+    const bossParts: string[] = [];
+    const showId = props.activeEnemyId ?? props.activeBossId;
+    const showName = props.activeEnemyName ?? props.activeBossName;
+    if (showId != null) bossParts.push(`#${showId}`);
+    if (showName) bossParts.push(showName);
+    const bossLabel = bossParts.length ? `• ${bossParts.join(" ")}` : "";
 
     return (
         <div className="controls gap-1">
@@ -178,6 +223,25 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                 <i className="fa-solid fa-chart-line mr-2"></i> {props.t("ui.controls.skills")}
             </button>
 
+            {/* Encounter timer (starts on combat) */}
+            <span
+                className="encounter-timer"
+                title={props.t("ui.labels.encounterTimer", "Encounter time (starts on combat)")}
+                style={{
+                    fontSize:11,
+                    color: "var(--text-secondary)",
+                    margin: "08px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    whiteSpace: "nowrap",
+                    lineHeight:1,
+                    gap:6,
+                }}
+            >
+                {timerDisplay}
+                {bossLabel && <span style={{ opacity:0.8 }}>{bossLabel}</span>}
+            </span>
+
             <div className="flex gap-1 mx-auto">
                 {/* Nearby/Solo Toggle */}
                 <button
@@ -214,7 +278,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                             onClick={() => isNearby && props.onSortChange("totalDmg")}
                             title={props.t("ui.buttons.sortDamage")}
                             disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            style={{ opacity: isNearby ?1 :0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
                             DMG
                         </button>
@@ -224,7 +288,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                             onClick={() => isNearby && props.onSortChange("totalDmgTaken")}
                             title={props.t("ui.buttons.sortDamageTaken")}
                             disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            style={{ opacity: isNearby ?1 :0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
                             Tank
                         </button>
@@ -234,7 +298,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                             onClick={() => isNearby && props.onSortChange("totalHeal")}
                             title={props.t("ui.buttons.sortHealing")}
                             disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            style={{ opacity: isNearby ?1 :0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
                             Heal
                         </button>
@@ -245,7 +309,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                             onClick={() => isNearby && props.onToggleShowAll && props.onToggleShowAll()}
                             title={props.t("ui.buttons.toggleTop10All")}
                             disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            style={{ opacity: isNearby ?1 :0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
                         >
                             {props.showAllPlayers ? props.t("ui.controls.showAll") : props.t("ui.controls.showTop10")}
                         </button>
@@ -263,7 +327,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                         title={props.t("ui.buttons.zoomOut")}
                         disabled={props.isLocked}
                         style={{
-                            opacity: props.isLocked ? 0.3 : 1,
+                            opacity: props.isLocked ?0.3 :1,
                             cursor: props.isLocked ? "not-allowed" : "pointer",
                         }}
                     >
@@ -276,7 +340,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                         title={props.t("ui.buttons.zoomIn")}
                         disabled={props.isLocked}
                         style={{
-                            opacity: props.isLocked ? 0.3 : 1,
+                            opacity: props.isLocked ?0.3 :1,
                             cursor: props.isLocked ? "not-allowed" : "pointer",
                         }}
                     >
@@ -295,7 +359,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                             : "Switch to English"
                     }
                 >
-                    <span style={{ fontSize: "10px", fontWeight: 600 }}>
+                    <span style={{ fontSize: "10px", fontWeight:600 }}>
                         {props.currentLanguage === "en" ? "EN" : "中"}
                     </span>
                 </button>
@@ -312,7 +376,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                         <i className="fa-solid fa-eye-dropper"></i>
                     </button>
                     {showOpacity && (
-                        <div style={{ position: "fixed", left: panelPos.left, top: panelPos.top, background: "var(--bg-darker)", border: "1px solid var(--border)", padding: 8, borderRadius: 4, zIndex: 9999 }}>
+                        <div style={{ position: "fixed", left: panelPos.left, top: panelPos.top, background: "var(--bg-darker)", border: "1px solid var(--border)", padding:8, borderRadius:4, zIndex:9999 }}>
                             <input
                                 type="range"
                                 min={0}
@@ -332,9 +396,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                     onClick={props.onToggleLock}
                     title={props.isLocked ? props.t("ui.buttons.unlockWindow") : props.t("ui.buttons.lockWindow")}
                 >
-                    <i
-                        className={`fa-solid fa-${props.isLocked ? "lock" : "lock-open"}`}
-                    ></i>
+                    <i className={`fa-solid fa-${props.isLocked ? "lock" : "lock-open"}`}></i>
                 </button>
 
                 {/* Close Button */}
@@ -344,7 +406,7 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
                     onClick={props.onClose}
                     title={props.t("ui.buttons.close")}
                     style={{
-                        opacity: props.isLocked ? 0.3 : 1,
+                        opacity: props.isLocked ?0.3 :1,
                         cursor: props.isLocked ? "not-allowed" : "pointer",
                         pointerEvents: props.isLocked ? "none" : "auto",
                     }}

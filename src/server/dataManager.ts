@@ -488,6 +488,12 @@ interface EnemyCache {
     name: Map<string, string>;
     hp: Map<string, number>;
     maxHp: Map<string, number>;
+    // Extra parsed details
+    configId?: Map<string, number>; // from AttrId mapping
+    reductionId?: Map<string, number>; // potential boss marker
+    reductionLevel?: Map<string, number>;
+    type?: Map<string, string>; // parsed type when known
+    isBoss?: Map<string, boolean>; // heuristic flag
 }
 
 export class UserDataManager {
@@ -503,6 +509,8 @@ export class UserDataManager {
     enemyCache: EnemyCache;
     localPlayerUid: number | null;
     lastLogTime?: number;
+    // New: aggregate enemy damage to support active enemy detection
+    enemyTotals: Map<number, number>;
 
     constructor(logger: Logger, globalSettings: GlobalSettings) {
         this.logger = logger;
@@ -518,8 +526,14 @@ export class UserDataManager {
             name: new Map(),
             hp: new Map(),
             maxHp: new Map(),
+            configId: new Map(),
+            reductionId: new Map(),
+            reductionLevel: new Map(),
+            type: new Map(),
+            isBoss: new Map(),
         };
         this.localPlayerUid = null;
+        this.enemyTotals = new Map();
     }
 
     setLocalPlayerUid(uid: number): void {
@@ -588,6 +602,16 @@ export class UserDataManager {
             isCauseLucky,
             hpLessenValue,
         );
+        // New: accumulate damage dealt to target enemy
+        if (typeof targetUid === "number" && targetUid > 0) {
+            const prev = this.enemyTotals.get(targetUid) || 0;
+            const next = prev + (Number.isFinite(damage) ? damage : 0);
+            this.enemyTotals.set(targetUid, next);
+            // Optional: debug log occasionally
+            if (next === damage || next - prev >= 100000) {
+                this.logger.debug(`Enemy ${targetUid} total taken updated: ${next}`);
+            }
+        }
     }
 
     addHealing(
@@ -722,12 +746,24 @@ export class UserDataManager {
             ...this.enemyCache.name.keys(),
             ...this.enemyCache.hp.keys(),
             ...this.enemyCache.maxHp.keys(),
-        ]);
+            ...(this.enemyCache.configId?.keys?.() || [] as any),
+            ...(this.enemyCache.reductionId?.keys?.() || [] as any),
+            ...(this.enemyCache.reductionLevel?.keys?.() || [] as any),
+            ...(this.enemyCache.type?.keys?.() || [] as any),
+            ...this.enemyTotals.keys(),
+        ] as Iterable<string>);
         enemyIds.forEach((id) => {
+            const numId = Number(id);
             result[id] = {
                 name: this.enemyCache.name.get(id),
                 hp: this.enemyCache.hp.get(id),
                 max_hp: this.enemyCache.maxHp.get(id),
+                configId: this.enemyCache.configId?.get(id) ?? null,
+                reductionId: this.enemyCache.reductionId?.get(id) ?? null,
+                reductionLevel: this.enemyCache.reductionLevel?.get(id) ?? null,
+                type: this.enemyCache.type?.get(id) ?? null,
+                isBoss: this.enemyCache.isBoss?.get(id) ?? false,
+                stats: { total: this.enemyTotals.get(numId) || 0 },
             };
         });
         return result;
@@ -737,6 +773,11 @@ export class UserDataManager {
         this.enemyCache.name.clear();
         this.enemyCache.hp.clear();
         this.enemyCache.maxHp.clear();
+        this.enemyCache.configId?.clear?.();
+        this.enemyCache.reductionId?.clear?.();
+        this.enemyCache.reductionLevel?.clear?.();
+        this.enemyCache.type?.clear?.();
+        this.enemyCache.isBoss?.clear?.();
     }
 
     async clearAll(): Promise<void> {
@@ -744,9 +785,25 @@ export class UserDataManager {
         if (this.users.size > 0 && this.globalSettings.enableHistorySave) {
             await this.saveAllUserData();
         }
-
         this.users = new Map();
         this.startTime = Date.now();
+        this.enemyTotals = new Map();
+        this.refreshEnemyCache();
+    }
+
+    // Reset only combat statistics for all players and enemy aggregates
+    resetCombatOnly(): void {
+        for (const [, user] of this.users.entries()) {
+            user.damageStats = new StatisticData(user, "伤害");
+            user.healingStats = new StatisticData(user, "治疗");
+            user.takenDamage = 0;
+            user.deadCount = 0;
+            user.skillUsage = new Map();
+        }
+        this.enemyTotals = new Map();
+        // Do not wipe enemy names/hp caches as they are metadata; keep them for display
+        this.startTime = Date.now();
+        this.logger.info("Combat-only reset completed. Player attributes preserved.");
     }
 
     async resetStatistics(): Promise<void> {
@@ -764,6 +821,9 @@ export class UserDataManager {
             user.skillUsage = new Map();
             // Intentionally do NOT reset user.attr or user.fightPoint
         }
+        // Reset enemy totals for new encounter as well
+        this.enemyTotals = new Map();
+        // Keep enemy meta cache
         this.startTime = Date.now();
         this.logger.info("Statistics reset while keeping player information.");
     }
@@ -853,6 +913,20 @@ export class UserDataManager {
         if (this.lastLogTime && currentTime - this.lastLogTime > 20000) {
             this.clearAll();
             this.logger.info("Timeout reached, statistics cleared!");
+        }
+    }
+
+    // Lightweight helper to mark boss via heuristics
+    private markEnemyTypeIfBoss(enemyUid: number): void {
+        const key = String(enemyUid);
+        const rid = this.enemyCache.reductionId?.get(key) ?? 0;
+        const rlv = this.enemyCache.reductionLevel?.get(key) ?? 0;
+        const maxHp = this.enemyCache.maxHp.get(key) ?? 0;
+        // Heuristics: reductionId present or high reduction level or very large maxHp
+        const boss = (rid && rid !== 0) || rlv >= 1 || maxHp >= 3_000_000;
+        if (boss) {
+            this.enemyCache.isBoss?.set(key, true);
+            this.enemyCache.type?.set(key, "boss");
         }
     }
 }

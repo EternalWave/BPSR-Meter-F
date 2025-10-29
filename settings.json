@@ -20,5 +20,10 @@
     },
     "playerRegistry": {},
     "windowSizes": {
-    }
+        "main": {
+            "x": -6,
+            "y": 0
+        }
+    },
+    "totalPausedMs": 0
 }

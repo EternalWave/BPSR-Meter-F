@@ -27,3 +27,6 @@ pnpm-lock.yaml
 
 # Electron packaged output
 dist_electron/
+
+# IDE
+.vs/

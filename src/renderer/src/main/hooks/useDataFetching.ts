@@ -98,7 +98,20 @@ export interface UseDataFetchingReturn {
     isLoading: boolean;
     isPaused: boolean;
     togglePause: () => Promise<void>;
-    startTime: number; // server session start time (may reflect zone change)
+    startTime: number; // server session start time
+    lastPausedAt: number | null;
+    totalPausedMs: number;
+    encounterStartTime: number | null; // begins on first combat detected
+    pausedBaselineMs: number; // server totalPausedMs snapshot when encounter started
+    activeBossId?: number | null;
+    activeBossName?: string | null;
+    activeEnemyId?: number | null;
+    activeEnemyName?: string | null;
+}
+
+// keep previous values if undefined in payload
+function coalesce<T>(val: T | undefined, prev: T): T {
+ return (val === undefined ? prev : val) as T;
 }
 
 export function useDataFetching(
@@ -119,6 +132,16 @@ export function useDataFetching(
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isPaused, setIsPaused] = useState<boolean>(false);
     const [startTime, setStartTime] = useState<number>(Date.now());
+    const [lastPausedAt, setLastPausedAt] = useState<number | null>(null);
+    const [totalPausedMs, setTotalPausedMs] = useState<number>(0);
+    const [encounterStartTime, setEncounterStartTime] = useState<number | null>(
+        null,
+    );
+    const [activeBossId, setActiveBossId] = useState<number | null>(null);
+    const [activeBossName, setActiveBossName] = useState<string | null>(null);
+    const [activeEnemyId, setActiveEnemyId] = useState<number | null>(null);
+    const [activeEnemyName, setActiveEnemyName] = useState<string | null>(null);
+    const pausedBaselineMsRef = useRef<number>(0);
 
     const lastStartTimeRef = useRef<number>(0);
     const lastTotalDamageRef = useRef<number>(0);
@@ -130,6 +153,8 @@ export function useDataFetching(
                 const json = await resp.json();
                 if (json && typeof json.paused === "boolean") {
                     setIsPaused(json.paused);
+                    setLastPausedAt(json.lastPausedAt ?? null);
+                    setTotalPausedMs(typeof json.totalPausedMs === "number" ? json.totalPausedMs :0);
                 }
             } catch (err) {
                 console.error("Failed to fetch server pause state:", err);
@@ -153,6 +178,8 @@ export function useDataFetching(
 
             if (json && typeof json.paused === "boolean") {
                 setIsPaused(json.paused);
+                setLastPausedAt(json.lastPausedAt ?? null);
+                setTotalPausedMs(typeof json.totalPausedMs === "number" ? json.totalPausedMs :0);
             }
         } catch (err) {
             console.error("Failed to update server pause state:", err);
@@ -171,20 +198,29 @@ export function useDataFetching(
                     skillsDataRes.data &&
                     skillsDataRes.data.skills
                 ) {
+                    // boss/enemy id/name may be absent occasionally; coalesce
+                    setActiveBossId((prev) =>
+ coalesce<number | null>(skillsDataRes.activeBossId, prev),
+ );
+ setActiveBossName((prev) =>
+ coalesce<string | null>(skillsDataRes.activeBossName, prev),
+ );
+ setActiveEnemyId((prev) =>
+ coalesce<number | null>(skillsDataRes.activeEnemyId, prev),
+ );
+ setActiveEnemyName((prev) =>
+ coalesce<string | null>(skillsDataRes.activeEnemyName, prev),
+ );
+
                     setSkillsData(skillsDataRes.data.skills);
                     setStartTime(skillsDataRes.startTime || Date.now());
-                    setIsLoading(
-                        Object.keys(skillsDataRes.data.skills).length ===0,
-                    );
+                    setIsLoading(Object.keys(skillsDataRes.data.skills).length ===0);
 
                     // Determine local uid for skills view (optional)
                     try {
                         const localUserResponse = await fetch("/api/solo-user");
                         const localUserData = await localUserResponse.json();
-                        if (
-                            localUserData.user &&
-                            Object.keys(localUserData.user).length >0
-                        ) {
+                        if (localUserData.user && Object.keys(localUserData.user).length >0) {
                             const currentLocalUid = parseInt(
                                 Object.keys(localUserData.user)[0],
                                 10,
@@ -193,6 +229,19 @@ export function useDataFetching(
                         }
                     } catch {}
 
+                    // Start timer on first detected combat in skills view
+                    if (encounterStartTime == null) {
+                        const hasCombat = Object.values(skillsDataRes.data.skills || {}).some(
+                            (u: any) =>
+                                Object.values(u.skills || {}).some(
+                                    (sk: any) => (sk.totalDamage ||0) >0 || (sk.totalCount ||0) >0,
+                                ),
+                        );
+                        if (hasCombat) {
+                            setEncounterStartTime(Date.now());
+                            pausedBaselineMsRef.current = totalPausedMs;
+                        }
+                    }
                 } else {
                     setSkillsData(null);
                     setIsLoading(true);
@@ -204,6 +253,19 @@ export function useDataFetching(
             const response = await fetch(apiEndpoint);
             const userData = await response.json();
 
+            setActiveBossId((prev) =>
+ coalesce<number | null>(userData.activeBossId, prev),
+ );
+ setActiveBossName((prev) =>
+ coalesce<string | null>(userData.activeBossName, prev),
+ );
+ setActiveEnemyId((prev) =>
+ coalesce<number | null>(userData.activeEnemyId, prev),
+ );
+ setActiveEnemyName((prev) =>
+ coalesce<string | null>(userData.activeEnemyName, prev),
+ );
+
             // remember server session start (may change on zone/server reset)
             if (userData.startTime) {
                 setStartTime(userData.startTime);
@@ -213,9 +275,11 @@ export function useDataFetching(
                 userData.startTime &&
                 userData.startTime !== lastStartTimeRef.current
             ) {
-                // Reset encounter and baselines on server reset
+                // Reset encounter on server reset
                 lastStartTimeRef.current = userData.startTime;
                 lastTotalDamageRef.current =0;
+                setEncounterStartTime(null);
+                pausedBaselineMsRef.current =0;
                 onServerReset?.();
             }
 
@@ -252,6 +316,15 @@ export function useDataFetching(
                 (acc: number, u: PlayerUser) => acc + (Number(u.taken_damage) ||0),
                 0,
             );
+
+            // Start timer on first detected combat in nearby/solo views
+            if (encounterStartTime == null) {
+                const hasCombat = (sumaTotalDamage + sumTotalHealing + sumTaken) >0;
+                if (hasCombat) {
+                    setEncounterStartTime(Date.now());
+                    pausedBaselineMsRef.current = totalPausedMs;
+                }
+            }
 
             if (sumaTotalDamage !== lastTotalDamageRef.current) {
                 lastTotalDamageRef.current = sumaTotalDamage;
@@ -299,6 +372,8 @@ export function useDataFetching(
         onServerReset,
         showAllPlayers,
         isPaused,
+        totalPausedMs,
+        encounterStartTime,
     ]);
 
     useInterval(fetchData, isPaused ? null :50);
@@ -311,6 +386,14 @@ export function useDataFetching(
         isPaused,
         togglePause,
         startTime,
+        lastPausedAt,
+        totalPausedMs,
+        encounterStartTime,
+        pausedBaselineMs: pausedBaselineMsRef.current,
+        activeBossId,
+        activeBossName,
+        activeEnemyId,
+        activeEnemyName,
     };
 }
 

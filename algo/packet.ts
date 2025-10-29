@@ -650,27 +650,59 @@ class PacketProcessor {
             const reader = pbjs.Reader.create(attr.RawData);
             this.logger.debug(`Found attrId ${attr.Id} for E${enemyUid} ${attr.RawData.toString('base64')}`);
             switch (attr.Id) {
-                case AttrType.AttrName:
+                case AttrType.AttrName: {
                     const enemyName = reader.string();
-                    this.userDataManager.enemyCache.name.set(enemyUid, enemyName);
+                    this.userDataManager.enemyCache.name.set(enemyUid as any, enemyName);
                     this.logger.info(`Found monster name ${enemyName} for id ${enemyUid}`);
                     break;
-                case AttrType.AttrId:
+                }
+                case AttrType.AttrId: {
                     const attrId = reader.int32();
                     const name = monsterNames[attrId];
                     if (name) {
                         this.logger.info(`Found moster name ${name} for id ${enemyUid}`);
-                        this.userDataManager.enemyCache.name.set(enemyUid, name);
+                        this.userDataManager.enemyCache.name.set(enemyUid as any, name);
+                    }
+                    // Track config id for type inference
+                    this.userDataManager.enemyCache.configId?.set(String(enemyUid), attrId);
+                    break;
+                }
+                case AttrType.AttrHp: {
+                    const enemyHp = reader.int32();
+                    this.userDataManager.enemyCache.hp.set(enemyUid as any, enemyHp);
+                    break;
+                }
+                case AttrType.AttrMaxHp: {
+                    const enemyMaxHp = reader.int32();
+                    this.userDataManager.enemyCache.maxHp.set(enemyUid as any, enemyMaxHp);
+                    // Heuristic boss marking by very large max HP
+                    if (enemyMaxHp >=3_000_000) {
+                        this.userDataManager.enemyCache.isBoss?.set(String(enemyUid), true);
+                        this.userDataManager.enemyCache.type?.set(String(enemyUid), 'boss');
+                        this.logger.info(`Marked enemy ${enemyUid} as boss by MaxHp=${enemyMaxHp}`);
                     }
                     break;
-                case AttrType.AttrHp:
-                    const enemyHp = reader.int32();
-                    this.userDataManager.enemyCache.hp.set(enemyUid, enemyHp);
+                }
+                case AttrType.AttrReductionLevel: {
+                    const reductionLevel = reader.int32();
+                    this.userDataManager.enemyCache.reductionLevel?.set(String(enemyUid), reductionLevel);
+                    if (reductionLevel >=1) {
+                        this.userDataManager.enemyCache.isBoss?.set(String(enemyUid), true);
+                        this.userDataManager.enemyCache.type?.set(String(enemyUid), 'boss');
+                        this.logger.info(`Marked enemy ${enemyUid} as boss by ReductionLevel=${reductionLevel}`);
+                    }
                     break;
-                case AttrType.AttrMaxHp:
-                    const enemyMaxHp = reader.int32();
-                    this.userDataManager.enemyCache.maxHp.set(enemyUid, enemyMaxHp);
+                }
+                case AttrType.AttrReduntionId: {
+                    const reductionId = reader.int32();
+                    this.userDataManager.enemyCache.reductionId?.set(String(enemyUid), reductionId);
+                    if (reductionId && reductionId !==0) {
+                        this.userDataManager.enemyCache.isBoss?.set(String(enemyUid), true);
+                        this.userDataManager.enemyCache.type?.set(String(enemyUid), 'boss');
+                        this.logger.info(`Marked enemy ${enemyUid} as boss by ReductionId=${reductionId}`);
+                    }
                     break;
+                }
                 default:
                     // this.logger.debug(`Found unknown attrId ${attr.Id} for E${enemyUid} ${attr.RawData.toString('base64')}`);
                     break;
