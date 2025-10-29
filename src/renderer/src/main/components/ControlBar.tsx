@@ -145,7 +145,9 @@ export function ControlBar(props: ControlBarProps): React.JSX.Element {
     const showId = props.activeEnemyId ?? props.activeBossId;
     const showName = props.activeEnemyName ?? props.activeBossName;
     if (showId != null) bossParts.push(`#${showId}`);
-    if (showName) bossParts.push(showName);
+    // Skip appending name if it is the same numeric value as the id
+    const nameIsMeaningful = !!showName && String(showName).trim() !== String(showId);
+    if (nameIsMeaningful) bossParts.push(String(showName));
     const bossLabel = bossParts.length ? `• ${bossParts.join(" ")}` : "";
 
     return (

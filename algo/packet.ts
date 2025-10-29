@@ -9,8 +9,13 @@ import type { UserDataManager } from '../src/server/dataManager';
 
 const TRANSLATIONS_DIR = path.join(__dirname, "translations");
 const monsterNames = JSON.parse(fs.readFileSync(TRANSLATIONS_DIR + "/zh.json", "utf-8")).monsters;
-// Custom overrides for known mob IDs
+// Custom overrides for known mob config IDs (AttrId)
 const customMonsterNames: Record<number, string> = {
+10: "Rin",
+75: "Training Dummy",
+};
+// Custom overrides for specific entity UIDs seen in-game (activeEnemyId)
+const customEntityNames: Record<number, string> = {
 10: "Rin",
 75: "Training Dummy",
 };
@@ -665,23 +670,42 @@ class PacketProcessor {
                         this.userDataManager.enemyCache.name.set(enemyUid as any, enemyName);
                         this.logger.info(`Found monster name ${enemyName} for id ${enemyUid}`);
                     }
+                    // Ensure a fallback custom name if still unnamed or numeric
+                    const cur = this.userDataManager.enemyCache.name.get(enemyUid as any);
+                    if (!cur || /^\d+$/.test(String(cur))) {
+                        const eid = Number(enemyUid);
+                        const fallback = customEntityNames[eid];
+                        if (fallback) this.userDataManager.enemyCache.name.set(enemyUid as any, fallback);
+                    }
                     break;
                 }
                 case AttrType.AttrId: {
                     const attrId = reader.int32();
-                    // Prefer custom overrides, fallback to translations
                     const name = customMonsterNames[attrId] || monsterNames[attrId];
                     if (name) {
                         this.logger.info(`Found moster name ${name} for id ${enemyUid}`);
                         this.userDataManager.enemyCache.name.set(enemyUid as any, name);
                     }
-                    // Track config id for type inference
                     this.userDataManager.enemyCache.configId?.set(String(enemyUid), attrId);
+                    // Ensure a fallback custom name by entity as well
+                    const cur = this.userDataManager.enemyCache.name.get(enemyUid as any);
+                    if (!cur || /^\d+$/.test(String(cur))) {
+                        const eid = Number(enemyUid);
+                        const fallback = customEntityNames[eid];
+                        if (fallback) this.userDataManager.enemyCache.name.set(enemyUid as any, fallback);
+                    }
                     break;
                 }
                 case AttrType.AttrHp: {
                     const enemyHp = reader.int32();
                     this.userDataManager.enemyCache.hp.set(enemyUid as any, enemyHp);
+                    // Ensure a fallback name as soon as we see any attribute
+                    const cur = this.userDataManager.enemyCache.name.get(enemyUid as any);
+                    if (!cur || /^\d+$/.test(String(cur))) {
+                        const eid = Number(enemyUid);
+                        const fallback = customEntityNames[eid];
+                        if (fallback) this.userDataManager.enemyCache.name.set(enemyUid as any, fallback);
+                    }
                     break;
                 }
                 case AttrType.AttrMaxHp: {
@@ -692,6 +716,13 @@ class PacketProcessor {
                         this.userDataManager.enemyCache.isBoss?.set(String(enemyUid), true);
                         this.userDataManager.enemyCache.type?.set(String(enemyUid), 'boss');
                         this.logger.info(`Marked enemy ${enemyUid} as boss by MaxHp=${enemyMaxHp}`);
+                    }
+                    // Ensure a fallback name as soon as we see any attribute
+                    const cur = this.userDataManager.enemyCache.name.get(enemyUid as any);
+                    if (!cur || /^\d+$/.test(String(cur))) {
+                        const eid = Number(enemyUid);
+                        const fallback = customEntityNames[eid];
+                        if (fallback) this.userDataManager.enemyCache.name.set(enemyUid as any, fallback);
                     }
                     break;
                 }
