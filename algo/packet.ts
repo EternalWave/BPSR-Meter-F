@@ -657,8 +657,14 @@ class PacketProcessor {
             switch (attr.Id) {
                 case AttrType.AttrName: {
                     const enemyName = reader.string();
-                    this.userDataManager.enemyCache.name.set(enemyUid as any, enemyName);
-                    this.logger.info(`Found monster name ${enemyName} for id ${enemyUid}`);
+                    const trimmed = (enemyName || '').trim();
+                    const isNumericOnly = /^\d+$/.test(trimmed);
+                    const existing = this.userDataManager.enemyCache.name.get(enemyUid as any);
+                    // Only set name if it's meaningful (non-numeric) or no existing meaningful name
+                    if (trimmed && (!isNumericOnly || !existing)) {
+                        this.userDataManager.enemyCache.name.set(enemyUid as any, enemyName);
+                        this.logger.info(`Found monster name ${enemyName} for id ${enemyUid}`);
+                    }
                     break;
                 }
                 case AttrType.AttrId: {
