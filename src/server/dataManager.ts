@@ -7,6 +7,12 @@ import type { Logger, GlobalSettings, SkillConfig } from "../types/index";
 const USER_DATA_DIR = process.env.NODE_ENV === "development" ? process.cwd() : process.env.USER_DATA_PATH;
 const TRANSLATIONS_DIR = path.join(__dirname, "translations");
 const skillConfig: SkillConfig = JSON.parse(readFileSync(TRANSLATIONS_DIR + "/zh.json", "utf-8")).skills;
+const allTranslations = JSON.parse(readFileSync(TRANSLATIONS_DIR + "/zh.json", "utf-8"));
+const monsterMap: Record<string, string> = allTranslations.monsters || {};
+const customEntityNames: Record<number, string> = {
+    10: "Rin",
+    75: "Training Dummy",
+};
 
 export class Lock {
     private queue: Array<() => void> = [];
@@ -752,10 +758,20 @@ export class UserDataManager {
             ...(this.enemyCache.type?.keys?.() || [] as any),
             ...this.enemyTotals.keys(),
         ] as Iterable<string>);
+        const displayName = (idNum: number): string | undefined => {
+            const idStr = String(idNum);
+            const nameFromCache = this.enemyCache.name.get(idStr);
+            const isNumericOnly = nameFromCache && /^\d+$/.test(String(nameFromCache));
+            if (nameFromCache && !isNumericOnly) return nameFromCache;
+            const fromTrans = monsterMap[idStr];
+            if (fromTrans) return fromTrans;
+            if (customEntityNames[idNum]) return customEntityNames[idNum];
+            return nameFromCache; // could be undefined or numeric
+        };
         enemyIds.forEach((id) => {
             const numId = Number(id);
             result[id] = {
-                name: this.enemyCache.name.get(id),
+                name: displayName(numId),
                 hp: this.enemyCache.hp.get(id),
                 max_hp: this.enemyCache.maxHp.get(id),
                 configId: this.enemyCache.configId?.get(id) ?? null,
@@ -763,7 +779,7 @@ export class UserDataManager {
                 reductionLevel: this.enemyCache.reductionLevel?.get(id) ?? null,
                 type: this.enemyCache.type?.get(id) ?? null,
                 isBoss: this.enemyCache.isBoss?.get(id) ?? false,
-                stats: { total: this.enemyTotals.get(numId) || 0 },
+                stats: { total: this.enemyTotals.get(numId) ||0 },
             };
         });
         return result;
