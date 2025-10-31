@@ -945,12 +945,21 @@ export class UserDataManager {
     // Resolve a display name for an enemy id from caches/translations/custom fallbacks
     private getEnemyDisplayName(idNum: number): string | undefined {
         const idStr = String(idNum);
-        const nameFromCache = this.enemyCache.name.get(idStr);
-        const isNumericOnly = nameFromCache && /^\d+$/.test(String(nameFromCache));
-        if (nameFromCache && !isNumericOnly) return nameFromCache;
-        const fromTrans = monsterMap[idStr];
-        if (fromTrans) return fromTrans;
+        const cached = this.enemyCache.name.get(idStr);
+        const isNumericOnly = cached && /^\d+$/.test(String(cached));
+        if (cached && !isNumericOnly) return cached;
+
+        // Prefer translated name via ConfigId when available
+        const cfgId = this.enemyCache.configId?.get(idStr);
+        if (typeof cfgId === "number") {
+            const trans = monsterMap[String(cfgId)];
+            if (trans && String(trans).trim().length >0) return trans;
+        }
+
+        // Fall back to custom per-entity overrides (rare)
         if (customEntityNames[idNum]) return customEntityNames[idNum];
-        return nameFromCache; // could be undefined or numeric
+
+        // As last resort, if cached is a non-empty non-meaningful numeric string, suppress it
+        return undefined;
     }
 }
