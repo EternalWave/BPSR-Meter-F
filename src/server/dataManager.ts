@@ -6,13 +6,33 @@ import type { Logger, GlobalSettings, SkillConfig } from "../types/index";
 // Use user data path in production, current directory in development
 const USER_DATA_DIR = process.env.NODE_ENV === "development" ? process.cwd() : process.env.USER_DATA_PATH;
 const TRANSLATIONS_DIR = path.join(__dirname, "translations");
-const skillConfig: SkillConfig = JSON.parse(readFileSync(TRANSLATIONS_DIR + "/zh.json", "utf-8")).skills;
-const allTranslations = JSON.parse(readFileSync(TRANSLATIONS_DIR + "/zh.json", "utf-8"));
-const monsterMap: Record<string, string> = allTranslations.monsters || {};
-const customEntityNames: Record<number, string> = {
-    10: "Rin",
-    75: "Training Dummy",
-};
+// Mutable translation stores so we can switch language at runtime
+let skillConfig: SkillConfig = {} as any;
+let monsterMap: Record<string, string> = {};
+function getTranslationsPath(lang: string): string {
+    // In development, files live at project root /translations; in prod, alongside compiled files
+    if (process.env.NODE_ENV === "development") {
+        return path.join(__dirname, "..", "..", "translations", `${lang}.json`);
+    }
+    return path.join(TRANSLATIONS_DIR, `${lang}.json`);
+}
+function loadTranslationsForLanguage(lang: string): void {
+    const tryLangs = [lang, "en", "zh"]; // prefer requested -> en -> zh
+    for (const l of tryLangs) {
+        try {
+            const p = getTranslationsPath(l);
+            const content = JSON.parse(readFileSync(p, "utf-8"));
+            skillConfig = content.skills || {};
+            monsterMap = content.monsters || {};
+            return;
+        } catch (e) {
+            // try next
+        }
+    }
+    // fallback empty maps if all failed
+    skillConfig = {} as any;
+    monsterMap = {} as any;
+}
 
 export class Lock {
     private queue: Array<() => void> = [];
@@ -540,6 +560,8 @@ export class UserDataManager {
         };
         this.localPlayerUid = null;
         this.enemyTotals = new Map();
+        // Initialize translations according to chosen language
+        loadTranslationsForLanguage(globalSettings.language || "en");
     }
 
     setLocalPlayerUid(uid: number): void {
@@ -550,6 +572,15 @@ export class UserDataManager {
 
     async initialize(): Promise<void> {
         // No cache loading needed
+    }
+
+    // Allow runtime language switching for names in logs and UI
+    reloadTranslations(lang?: string): void {
+        const target = (lang || this.globalSettings.language || "en") as string;
+        loadTranslationsForLanguage(target);
+        try {
+            this.logger.info(`Translations reloaded for language: ${target}`);
+        } catch {}
     }
 
     getUser(uid: number): UserData {
@@ -946,20 +977,35 @@ export class UserDataManager {
     private getEnemyDisplayName(idNum: number): string | undefined {
         const idStr = String(idNum);
         const cached = this.enemyCache.name.get(idStr);
-        const isNumericOnly = cached && /^\d+$/.test(String(cached));
-        if (cached && !isNumericOnly) return cached;
-
-        // Prefer translated name via ConfigId when available
         const cfgId = this.enemyCache.configId?.get(idStr);
-        if (typeof cfgId === "number") {
+        const wantZh = (this.globalSettings.language || "en") === "zh";
+
+        //1) If not zh (e.g., en), prefer translated by config id first
+        if (!wantZh && typeof cfgId === "number") {
             const trans = monsterMap[String(cfgId)];
             if (trans && String(trans).trim().length >0) return trans;
         }
 
-        // Fall back to custom per-entity overrides (rare)
+        //2) If cached is meaningful non-numeric, optionally prefer it when zh or when no translation
+        const isNumericOnly = cached && /^\d+$/.test(String(cached));
+        if (cached && !isNumericOnly) return cached;
+
+        //3) If zh preferred and have translation via config id, use it
+        if (wantZh && typeof cfgId === "number") {
+            const trans = monsterMap[String(cfgId)];
+            if (trans && String(trans).trim().length >0) return trans;
+        }
+
+        //4) Custom overrides for certain entity ids
         if (customEntityNames[idNum]) return customEntityNames[idNum];
 
-        // As last resort, if cached is a non-empty non-meaningful numeric string, suppress it
+        return undefined;
+    }
+
+    // Expose translation lookup by monster config id for packet processor
+    public getMonsterNameByConfigId(configId: number): string | undefined {
+        const trans = monsterMap[String(configId)];
+        if (trans && String(trans).trim().length >0) return trans;
         return undefined;
     }
 }

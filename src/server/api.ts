@@ -14,6 +14,8 @@ const USER_DATA_DIR = process.env.NODE_ENV === "development" ? process.cwd() : p
 const SETTINGS_PATH = path.join(USER_DATA_DIR, "settings.json");
 const PLAYER_REGISTRY_PATH = path.join(USER_DATA_DIR, "player_registry.json");
 
+const LanguageChangeGracePeriod = 5000; // 5 seconds
+
 // Boss IDs to auto-reset on combat start
 const BOSS_IDS = new Set<number>([
 783, // Goblin
@@ -581,6 +583,9 @@ function initializeApi(
  }
 
  globalSettings.language = language;
+ try {
+ userDataManager.reloadTranslations?.(language);
+ } catch {}
  await fsPromises.writeFile(
  SETTINGS_PATH,
  JSON.stringify(globalSettings, null,4),
