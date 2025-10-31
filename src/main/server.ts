@@ -119,7 +119,10 @@ async function main(): Promise<void> {
         process.exit(1);
     }
 
-    logger.level = "error";
+    // Set log level: default to 'info' in development, 'error' in production. Allow override via LOG_LEVEL env.
+    const effectiveLevel = (process.env.LOG_LEVEL as string) || (process.env.NODE_ENV === "development" ? "info" : "error");
+    logger.level = effectiveLevel as any;
+    console.log(`Logger level set to '${logger.level}' (NODE_ENV=${process.env.NODE_ENV || "unknown"})`);
 
     process.on("SIGINT", async () => {
         console.log("\nClosing application...");
