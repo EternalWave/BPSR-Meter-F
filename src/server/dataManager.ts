@@ -609,12 +609,17 @@ export class UserDataManager {
             hpLessenValue,
         );
         // New: accumulate damage dealt to target enemy
-        if (typeof targetUid === "number" && targetUid > 0) {
-            const prev = this.enemyTotals.get(targetUid) || 0;
-            const next = prev + (Number.isFinite(damage) ? damage : 0);
+        if (typeof targetUid === "number" && targetUid >0) {
+            const prev = this.enemyTotals.get(targetUid) ||0;
+            const next = prev + (Number.isFinite(damage) ? damage :0);
             this.enemyTotals.set(targetUid, next);
+            // Log once when combat against this enemy starts (first non-zero total)
+            if (prev ===0 && next >0) {
+                const name = this.getEnemyDisplayName(targetUid) || String(targetUid);
+                this.logger.info(`[ENCOUNTER-START] Enemy #${targetUid} (${name})`);
+            }
             // Optional: debug log occasionally
-            if (next === damage || next - prev >= 100000) {
+            if (next === damage || next - prev >=100000) {
                 this.logger.debug(`Enemy ${targetUid} total taken updated: ${next}`);
             }
         }
@@ -758,16 +763,7 @@ export class UserDataManager {
             ...(this.enemyCache.type?.keys?.() || [] as any),
             ...this.enemyTotals.keys(),
         ] as Iterable<string>);
-        const displayName = (idNum: number): string | undefined => {
-            const idStr = String(idNum);
-            const nameFromCache = this.enemyCache.name.get(idStr);
-            const isNumericOnly = nameFromCache && /^\d+$/.test(String(nameFromCache));
-            if (nameFromCache && !isNumericOnly) return nameFromCache;
-            const fromTrans = monsterMap[idStr];
-            if (fromTrans) return fromTrans;
-            if (customEntityNames[idNum]) return customEntityNames[idNum];
-            return nameFromCache; // could be undefined or numeric
-        };
+        const displayName = (idNum: number): string | undefined => this.getEnemyDisplayName(idNum);
         enemyIds.forEach((id) => {
             const numId = Number(id);
             result[id] = {
@@ -944,5 +940,17 @@ export class UserDataManager {
             this.enemyCache.isBoss?.set(key, true);
             this.enemyCache.type?.set(key, "boss");
         }
+    }
+
+    // Resolve a display name for an enemy id from caches/translations/custom fallbacks
+    private getEnemyDisplayName(idNum: number): string | undefined {
+        const idStr = String(idNum);
+        const nameFromCache = this.enemyCache.name.get(idStr);
+        const isNumericOnly = nameFromCache && /^\d+$/.test(String(nameFromCache));
+        if (nameFromCache && !isNumericOnly) return nameFromCache;
+        const fromTrans = monsterMap[idStr];
+        if (fromTrans) return fromTrans;
+        if (customEntityNames[idNum]) return customEntityNames[idNum];
+        return nameFromCache; // could be undefined or numeric
     }
 }
