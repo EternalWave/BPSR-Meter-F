@@ -62,7 +62,8 @@
         "protobufjs-cli": "^1.1.3",
         "typescript": "^5.9.3",
         "vite": "^7.1.11",
-        "png-to-ico": "^3.0.4"
+        "png-to-ico": "^2.1.8",
+        "jimp": "^0.22.12"
     },
     "pkg": {
         "scripts": "server.js",
@@ -113,6 +114,9 @@
         },
         "nsis": {
             "include": "extra.nsh",
+            "installerIcon": "icon.ico",
+            "uninstallerIcon": "icon.ico",
+            "installerHeaderIcon": "icon.ico",
             "deleteAppDataOnUninstall": true
         },
         "directories": {
