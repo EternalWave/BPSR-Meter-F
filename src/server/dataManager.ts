@@ -9,6 +9,12 @@ const TRANSLATIONS_DIR = path.join(__dirname, "translations");
 // Mutable translation stores so we can switch language at runtime
 let skillConfig: SkillConfig = {} as any;
 let monsterMap: Record<string, string> = {};
+// Custom overrides for specific entity UIDs seen in-game (activeEnemyId)
+const customEntityNames: Record<number, string> = {
+    10: "Rin",
+    75: "Training Dummy",
+};
+
 function getTranslationsPath(lang: string): string {
     // In development, files live at project root /translations; in prod, alongside compiled files
     if (process.env.NODE_ENV === "development") {
