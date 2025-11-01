@@ -283,7 +283,8 @@ export function useDataFetching(
                 onServerReset?.();
             }
 
-            let userArray: PlayerUser[] = Object.entries(userData.user || {}).map(
+            // Build full list first (used for encounter/timer detection)
+            const allUsers: PlayerUser[] = Object.entries(userData.user || {}).map(
                 ([uid, data]: [string, any]) => ({
                     ...data,
                     uid: parseInt(uid,10),
@@ -291,46 +292,62 @@ export function useDataFetching(
             );
 
             // If no users yet, keep waiting
-            if (!userArray || userArray.length ===0) {
+            if (!allUsers || allUsers.length ===0) {
                 setPlayers([]);
                 setIsLoading(true);
                 return;
             }
 
-            // Keep all players; compute combat totals from raw numbers
-            setIsLoading(false);
-
-            const sumaTotalDamage = userArray.reduce(
+            // Encounter detection uses the full dataset (damage/heal/taken)
+            const sumaTotalDamageAll = allUsers.reduce(
                 (acc: number, u: PlayerUser) =>
                     acc + (u.total_damage?.total ? Number(u.total_damage.total) :0),
                 0,
             );
 
-            const sumTotalHealing = userArray.reduce(
+            const sumTotalHealingAll = allUsers.reduce(
                 (acc: number, u: PlayerUser) =>
                     acc + (u.total_healing?.total ? Number(u.total_healing.total) :0),
                 0,
             );
 
-            const sumTaken = userArray.reduce(
+            const sumTakenAll = allUsers.reduce(
                 (acc: number, u: PlayerUser) => acc + (Number(u.taken_damage) ||0),
                 0,
             );
 
             // Start timer on first detected combat in nearby/solo views
             if (encounterStartTime == null) {
-                const hasCombat = (sumaTotalDamage + sumTotalHealing + sumTaken) >0;
+                const hasCombat = (sumaTotalDamageAll + sumTotalHealingAll + sumTakenAll) >0;
                 if (hasCombat) {
                     setEncounterStartTime(Date.now());
                     pausedBaselineMsRef.current = totalPausedMs;
                 }
             }
 
-            if (sumaTotalDamage !== lastTotalDamageRef.current) {
-                lastTotalDamageRef.current = sumaTotalDamage;
+            if (sumaTotalDamageAll !== lastTotalDamageRef.current) {
+                lastTotalDamageRef.current = sumaTotalDamageAll;
             }
 
-            // compute percentages safely
+            // Filter to only active combatants (dealt >0 damage)
+            let userArray: PlayerUser[] = allUsers.filter(
+                (u) => Number(u.total_damage?.total ||0) >0,
+            );
+
+            // If none are active, show empty and keep loading spinner
+            if (userArray.length ===0) {
+                setPlayers([]);
+                setIsLoading(true);
+                return;
+            }
+
+            // compute percentages relative to filtered combatants only
+            const sumaTotalDamage = userArray.reduce(
+                (acc: number, u: PlayerUser) =>
+                    acc + (u.total_damage?.total ? Number(u.total_damage.total) :0),
+                0,
+            );
+
             userArray.forEach((u: PlayerUser) => {
                 const userDamage = u.total_damage?.total ? Number(u.total_damage.total) :0;
                 u.damagePercent = sumaTotalDamage >0
@@ -340,22 +357,11 @@ export function useDataFetching(
 
             sortUserArray(userArray, sortColumn, sortDirection);
 
-            // Nearby view: optionally limit to top10 + local
+            // Nearby view: optionally limit to top10
             let finalArray = userArray;
             if (viewMode === "nearby" && !showAllPlayers) {
                 const top10 = userArray.slice(0,10);
-                let list = top10;
-                try {
-                    const localUserResponse = await fetch("/api/solo-user");
-                    const localUserData = await localUserResponse.json();
-                    const localKey = localUserData.user ? Object.keys(localUserData.user)[0] : undefined;
-                    const localId = localKey ? parseInt(localKey,10) : undefined;
-                    if (localId && !top10.some((u) => u.uid === localId)) {
-                        const extra = userArray.find((u) => u.uid === localId);
-                        if (extra) list = [...top10, extra];
-                    }
-                } catch {}
-                finalArray = list;
+                finalArray = top10;
             }
 
             setPlayers(finalArray);
