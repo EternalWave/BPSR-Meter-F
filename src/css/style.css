@@ -1159,11 +1159,12 @@ body {
     content: "";
     position: absolute;
     inset: 0;
-    background: var(--bg-dark);
+    background: #0f141e; /* opaque dark */
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    backdrop-filter: blur(8px);
-    opacity: 1;
+    /* Remove blur to avoid translucency */
+    backdrop-filter: none;
+    opacity: 1; /* ensure fully opaque */
     pointer-events: none;
     z-index: 0;
 }
@@ -1192,7 +1193,7 @@ body {
     display: flex;
     flex: 1;
     overflow: hidden;
-    background: var(--bg-dark);
+    background: #0f141e;
 }
 
 .history-list-section {
@@ -1200,7 +1201,7 @@ body {
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    background: rgba(0, 0, 0, 0.2);
+    background: #0b1018;
     pointer-events: auto;
 }
 
