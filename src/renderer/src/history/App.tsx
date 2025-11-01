@@ -1,5 +1,11 @@
 import React, { useEffect, useCallback } from "react";
-import { HistoryHeader, HistoryControls, HistoryList, HistoryDetails, SkillModal } from "./components";
+import {
+    HistoryHeader,
+    HistoryControls,
+    HistoryList,
+    HistoryDetails,
+    SkillModal,
+} from "./components";
 import { useHistoryList, useHistoryDetails, useHistorySettings } from "./hooks";
 import { useWindowControls } from "../shared/hooks";
 import { usePlayerRegistry } from "../main/hooks/usePlayerRegistry";

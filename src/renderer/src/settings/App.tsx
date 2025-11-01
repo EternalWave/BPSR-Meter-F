@@ -5,7 +5,11 @@ import { useTranslations } from "../main/hooks/useTranslations";
 export function SettingsApp(): React.JSX.Element {
     const { t } = useTranslations();
     const { scale, isDragging, zoomIn, zoomOut, handleDragStart, handleClose } =
-        useWindowControls({ baseWidth: 600, baseHeight: 420, windowType: "settings" });
+        useWindowControls({
+            baseWidth: 600,
+            baseHeight: 420,
+            windowType: "settings",
+        });
 
     const defaultColumns: Record<string, boolean> = {
         dps: true,
@@ -21,7 +25,8 @@ export function SettingsApp(): React.JSX.Element {
         totalHeal: true,
     };
 
-    const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(defaultColumns);
+    const [visibleColumns, setVisibleColumns] =
+        useState<Record<string, boolean>>(defaultColumns);
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
@@ -41,28 +46,46 @@ export function SettingsApp(): React.JSX.Element {
     const notifyVisibleColumnsUpdate = useCallback(() => {
         try {
             // write a short-lived marker to trigger storage events in other windows
-            localStorage.setItem("visibleColumnsUpdateMarker", String(Date.now()));
-            setTimeout(() => localStorage.removeItem("visibleColumnsUpdateMarker"), 150);
+            localStorage.setItem(
+                "visibleColumnsUpdateMarker",
+                String(Date.now()),
+            );
+            setTimeout(
+                () => localStorage.removeItem("visibleColumnsUpdateMarker"),
+                150,
+            );
         } catch {}
     }, []);
 
-    const toggleColumn = useCallback((key: string) => {
-        setVisibleColumns((prev) => {
-            const next = { ...prev, [key]: !prev[key] };
-            try {
-                localStorage.setItem("visibleColumns", JSON.stringify(next));
-            } catch (e) {
-                console.warn("Failed to persist visibleColumns to localStorage", e);
-            }
-            // Notify other windows immediately
-            notifyVisibleColumnsUpdate();
-            return next;
-        });
-    }, [notifyVisibleColumnsUpdate]);
+    const toggleColumn = useCallback(
+        (key: string) => {
+            setVisibleColumns((prev) => {
+                const next = { ...prev, [key]: !prev[key] };
+                try {
+                    localStorage.setItem(
+                        "visibleColumns",
+                        JSON.stringify(next),
+                    );
+                } catch (e) {
+                    console.warn(
+                        "Failed to persist visibleColumns to localStorage",
+                        e,
+                    );
+                }
+                // Notify other windows immediately
+                notifyVisibleColumnsUpdate();
+                return next;
+            });
+        },
+        [notifyVisibleColumnsUpdate],
+    );
 
     const save = useCallback(() => {
         try {
-            localStorage.setItem("visibleColumns", JSON.stringify(visibleColumns));
+            localStorage.setItem(
+                "visibleColumns",
+                JSON.stringify(visibleColumns),
+            );
             // notify as well so immediate sync occurs
             notifyVisibleColumnsUpdate();
             setSaved(true);
@@ -74,28 +97,70 @@ export function SettingsApp(): React.JSX.Element {
 
     return (
         <div className="settings-app" style={{ padding: 12 }}>
-            <div className="controls" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div
+                className="controls"
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                }}
+            >
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <div className="drag-indicator" onMouseDown={handleDragStart}>
-                        <i className="fa-solid fa-grip-vertical" style={{ fontSize: 10 }}></i>
+                    <div
+                        className="drag-indicator"
+                        onMouseDown={handleDragStart}
+                    >
+                        <i
+                            className="fa-solid fa-grip-vertical"
+                            style={{ fontSize: 10 }}
+                        ></i>
                     </div>
-                    <div className="group-title">{t("ui.controls.settings", "Settings")}</div>
+                    <div className="group-title">
+                        {t("ui.controls.settings", "Settings")}
+                    </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
-                    <button className="control-button" onClick={zoomOut}><i className="fa-solid fa-minus"></i></button>
-                    <button className="control-button" onClick={zoomIn}><i className="fa-solid fa-plus"></i></button>
-                    <button className="control-button" onClick={handleClose}><i className="fa-solid fa-xmark"></i></button>
+                    <button className="control-button" onClick={zoomOut}>
+                        <i className="fa-solid fa-minus"></i>
+                    </button>
+                    <button className="control-button" onClick={zoomIn}>
+                        <i className="fa-solid fa-plus"></i>
+                    </button>
+                    <button className="control-button" onClick={handleClose}>
+                        <i className="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
             </div>
 
             <div className="group-window" style={{ marginTop: 12 }}>
-                <h4 style={{ marginTop: 0 }}>{t("ui.controls.columns", "Columns")}</h4>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                <h4 style={{ marginTop: 0 }}>
+                    {t("ui.controls.columns", "Columns")}
+                </h4>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(2, 1fr)",
+                        gap: 8,
+                    }}
+                >
                     {Object.keys(visibleColumns).map((key) => (
-                        <label key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <input type="checkbox" checked={!!visibleColumns[key]} onChange={() => toggleColumn(key)} />
-                            <span style={{ fontSize: 12 }}>{t(`ui.stats.${key}`, key)}</span>
+                        <label
+                            key={key}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={!!visibleColumns[key]}
+                                onChange={() => toggleColumn(key)}
+                            />
+                            <span style={{ fontSize: 12 }}>
+                                {t(`ui.stats.${key}`, key)}
+                            </span>
                         </label>
                     ))}
                 </div>
@@ -104,7 +169,17 @@ export function SettingsApp(): React.JSX.Element {
                     <button className="control-button" onClick={save}>
                         {t("ui.buttons.save", "Save")}
                     </button>
-                    {saved && <span style={{ color: "#2ecc71", fontWeight: 600, marginLeft: 8 }}>{t("ui.messages.saved", "Saved")}</span>}
+                    {saved && (
+                        <span
+                            style={{
+                                color: "#2ecc71",
+                                fontWeight: 600,
+                                marginLeft: 8,
+                            }}
+                        >
+                            {t("ui.messages.saved", "Saved")}
+                        </span>
+                    )}
                 </div>
             </div>
         </div>

@@ -25,7 +25,9 @@ export function AvailablePlayers({
             <h4>{t("ui.titles.availablePlayers")}</h4>
             <div id="available-players-list" className="available-players-list">
                 {nonGroupPlayers.length === 0 ? (
-                    <div className="empty-state">{t("ui.messages.noAvailablePlayers")}</div>
+                    <div className="empty-state">
+                        {t("ui.messages.noAvailablePlayers")}
+                    </div>
                 ) : (
                     nonGroupPlayers.map((player) => {
                         if (!player.uuid) return null;

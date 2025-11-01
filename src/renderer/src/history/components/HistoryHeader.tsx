@@ -37,7 +37,7 @@ export function HistoryHeader({
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                 }}
-                >
+            >
                 {t("ui.controls.combatHistory")}
             </span>
 

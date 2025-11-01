@@ -111,7 +111,7 @@ export interface UseDataFetchingReturn {
 
 // keep previous values if undefined in payload
 function coalesce<T>(val: T | undefined, prev: T): T {
- return (val === undefined ? prev : val) as T;
+    return (val === undefined ? prev : val) as T;
 }
 
 export function useDataFetching(
@@ -154,7 +154,11 @@ export function useDataFetching(
                 if (json && typeof json.paused === "boolean") {
                     setIsPaused(json.paused);
                     setLastPausedAt(json.lastPausedAt ?? null);
-                    setTotalPausedMs(typeof json.totalPausedMs === "number" ? json.totalPausedMs :0);
+                    setTotalPausedMs(
+                        typeof json.totalPausedMs === "number"
+                            ? json.totalPausedMs
+                            : 0,
+                    );
                 }
             } catch (err) {
                 console.error("Failed to fetch server pause state:", err);
@@ -179,7 +183,11 @@ export function useDataFetching(
             if (json && typeof json.paused === "boolean") {
                 setIsPaused(json.paused);
                 setLastPausedAt(json.lastPausedAt ?? null);
-                setTotalPausedMs(typeof json.totalPausedMs === "number" ? json.totalPausedMs :0);
+                setTotalPausedMs(
+                    typeof json.totalPausedMs === "number"
+                        ? json.totalPausedMs
+                        : 0,
+                );
             }
         } catch (err) {
             console.error("Failed to update server pause state:", err);
@@ -194,33 +202,50 @@ export function useDataFetching(
                 const skillsDataRes = await skillsRes.json();
 
                 if (
-                    skillsDataRes.code ===0 &&
+                    skillsDataRes.code === 0 &&
                     skillsDataRes.data &&
                     skillsDataRes.data.skills
                 ) {
                     // boss/enemy id/name may be absent occasionally; coalesce
                     setActiveBossId((prev) =>
- coalesce<number | null>(skillsDataRes.activeBossId, prev),
- );
- setActiveBossName((prev) =>
- coalesce<string | null>(skillsDataRes.activeBossName, prev),
- );
- setActiveEnemyId((prev) =>
- coalesce<number | null>(skillsDataRes.activeEnemyId, prev),
- );
- setActiveEnemyName((prev) =>
- coalesce<string | null>(skillsDataRes.activeEnemyName, prev),
- );
+                        coalesce<number | null>(
+                            skillsDataRes.activeBossId,
+                            prev,
+                        ),
+                    );
+                    setActiveBossName((prev) =>
+                        coalesce<string | null>(
+                            skillsDataRes.activeBossName,
+                            prev,
+                        ),
+                    );
+                    setActiveEnemyId((prev) =>
+                        coalesce<number | null>(
+                            skillsDataRes.activeEnemyId,
+                            prev,
+                        ),
+                    );
+                    setActiveEnemyName((prev) =>
+                        coalesce<string | null>(
+                            skillsDataRes.activeEnemyName,
+                            prev,
+                        ),
+                    );
 
                     setSkillsData(skillsDataRes.data.skills);
                     setStartTime(skillsDataRes.startTime || Date.now());
-                    setIsLoading(Object.keys(skillsDataRes.data.skills).length ===0);
+                    setIsLoading(
+                        Object.keys(skillsDataRes.data.skills).length === 0,
+                    );
 
                     // Determine local uid for skills view (optional)
                     try {
                         const localUserResponse = await fetch("/api/solo-user");
                         const localUserData = await localUserResponse.json();
-                        if (localUserData.user && Object.keys(localUserData.user).length >0) {
+                        if (
+                            localUserData.user &&
+                            Object.keys(localUserData.user).length > 0
+                        ) {
                             const currentLocalUid = parseInt(
                                 Object.keys(localUserData.user)[0],
                                 10,
@@ -231,11 +256,14 @@ export function useDataFetching(
 
                     // Start timer on first detected combat in skills view
                     if (encounterStartTime == null) {
-                        const hasCombat = Object.values(skillsDataRes.data.skills || {}).some(
-                            (u: any) =>
-                                Object.values(u.skills || {}).some(
-                                    (sk: any) => (sk.totalDamage ||0) >0 || (sk.totalCount ||0) >0,
-                                ),
+                        const hasCombat = Object.values(
+                            skillsDataRes.data.skills || {},
+                        ).some((u: any) =>
+                            Object.values(u.skills || {}).some(
+                                (sk: any) =>
+                                    (sk.totalDamage || 0) > 0 ||
+                                    (sk.totalCount || 0) > 0,
+                            ),
                         );
                         if (hasCombat) {
                             setEncounterStartTime(Date.now());
@@ -249,22 +277,23 @@ export function useDataFetching(
                 return;
             }
 
-            const apiEndpoint = viewMode === "solo" ? "/api/solo-user" : "/api/data";
+            const apiEndpoint =
+                viewMode === "solo" ? "/api/solo-user" : "/api/data";
             const response = await fetch(apiEndpoint);
             const userData = await response.json();
 
             setActiveBossId((prev) =>
- coalesce<number | null>(userData.activeBossId, prev),
- );
- setActiveBossName((prev) =>
- coalesce<string | null>(userData.activeBossName, prev),
- );
- setActiveEnemyId((prev) =>
- coalesce<number | null>(userData.activeEnemyId, prev),
- );
- setActiveEnemyName((prev) =>
- coalesce<string | null>(userData.activeEnemyName, prev),
- );
+                coalesce<number | null>(userData.activeBossId, prev),
+            );
+            setActiveBossName((prev) =>
+                coalesce<string | null>(userData.activeBossName, prev),
+            );
+            setActiveEnemyId((prev) =>
+                coalesce<number | null>(userData.activeEnemyId, prev),
+            );
+            setActiveEnemyName((prev) =>
+                coalesce<string | null>(userData.activeEnemyName, prev),
+            );
 
             // remember server session start (may change on zone/server reset)
             if (userData.startTime) {
@@ -277,22 +306,22 @@ export function useDataFetching(
             ) {
                 // Reset encounter on server reset
                 lastStartTimeRef.current = userData.startTime;
-                lastTotalDamageRef.current =0;
+                lastTotalDamageRef.current = 0;
                 setEncounterStartTime(null);
-                pausedBaselineMsRef.current =0;
+                pausedBaselineMsRef.current = 0;
                 onServerReset?.();
             }
 
             // Build full list first (used for encounter/timer detection)
-            const allUsers: PlayerUser[] = Object.entries(userData.user || {}).map(
-                ([uid, data]: [string, any]) => ({
-                    ...data,
-                    uid: parseInt(uid,10),
-                }),
-            );
+            const allUsers: PlayerUser[] = Object.entries(
+                userData.user || {},
+            ).map(([uid, data]: [string, any]) => ({
+                ...data,
+                uid: parseInt(uid, 10),
+            }));
 
             // If no users yet, keep waiting
-            if (!allUsers || allUsers.length ===0) {
+            if (!allUsers || allUsers.length === 0) {
                 setPlayers([]);
                 setIsLoading(true);
                 return;
@@ -301,24 +330,30 @@ export function useDataFetching(
             // Encounter detection uses the full dataset (damage/heal/taken)
             const sumaTotalDamageAll = allUsers.reduce(
                 (acc: number, u: PlayerUser) =>
-                    acc + (u.total_damage?.total ? Number(u.total_damage.total) :0),
+                    acc +
+                    (u.total_damage?.total ? Number(u.total_damage.total) : 0),
                 0,
             );
 
             const sumTotalHealingAll = allUsers.reduce(
                 (acc: number, u: PlayerUser) =>
-                    acc + (u.total_healing?.total ? Number(u.total_healing.total) :0),
+                    acc +
+                    (u.total_healing?.total
+                        ? Number(u.total_healing.total)
+                        : 0),
                 0,
             );
 
             const sumTakenAll = allUsers.reduce(
-                (acc: number, u: PlayerUser) => acc + (Number(u.taken_damage) ||0),
+                (acc: number, u: PlayerUser) =>
+                    acc + (Number(u.taken_damage) || 0),
                 0,
             );
 
             // Start timer on first detected combat in nearby/solo views
             if (encounterStartTime == null) {
-                const hasCombat = (sumaTotalDamageAll + sumTotalHealingAll + sumTakenAll) >0;
+                const hasCombat =
+                    sumaTotalDamageAll + sumTotalHealingAll + sumTakenAll > 0;
                 if (hasCombat) {
                     setEncounterStartTime(Date.now());
                     pausedBaselineMsRef.current = totalPausedMs;
@@ -331,11 +366,11 @@ export function useDataFetching(
 
             // Filter to only active combatants (dealt >0 damage)
             let userArray: PlayerUser[] = allUsers.filter(
-                (u) => Number(u.total_damage?.total ||0) >0,
+                (u) => Number(u.total_damage?.total || 0) > 0,
             );
 
             // If none are active, show empty list but keep polling in background (no spinner)
-            if (userArray.length ===0) {
+            if (userArray.length === 0) {
                 setPlayers([]);
                 setIsLoading(false);
                 return;
@@ -344,15 +379,25 @@ export function useDataFetching(
             // compute percentages relative to filtered combatants only
             const sumaTotalDamage = userArray.reduce(
                 (acc: number, u: PlayerUser) =>
-                    acc + (u.total_damage?.total ? Number(u.total_damage.total) :0),
+                    acc +
+                    (u.total_damage?.total ? Number(u.total_damage.total) : 0),
                 0,
             );
 
             userArray.forEach((u: PlayerUser) => {
-                const userDamage = u.total_damage?.total ? Number(u.total_damage.total) :0;
-                u.damagePercent = sumaTotalDamage >0
-                    ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) *100))
-                    :0;
+                const userDamage = u.total_damage?.total
+                    ? Number(u.total_damage.total)
+                    : 0;
+                u.damagePercent =
+                    sumaTotalDamage > 0
+                        ? Math.max(
+                              0,
+                              Math.min(
+                                  100,
+                                  (userDamage / sumaTotalDamage) * 100,
+                              ),
+                          )
+                        : 0;
             });
 
             sortUserArray(userArray, sortColumn, sortDirection);
@@ -360,7 +405,7 @@ export function useDataFetching(
             // Nearby view: optionally limit to top10
             let finalArray = userArray;
             if (viewMode === "nearby" && !showAllPlayers) {
-                const top10 = userArray.slice(0,10);
+                const top10 = userArray.slice(0, 10);
                 finalArray = top10;
             }
 
@@ -382,7 +427,7 @@ export function useDataFetching(
         encounterStartTime,
     ]);
 
-    useInterval(fetchData, isPaused ? null :50);
+    useInterval(fetchData, isPaused ? null : 50);
 
     return {
         players,
@@ -413,24 +458,28 @@ function sortUserArray(
 
         switch (sortColumn) {
             case "totalDmg":
-                aVal = a.total_damage?.total ? Number(a.total_damage.total) :0;
-                bVal = b.total_damage?.total ? Number(b.total_damage.total) :0;
+                aVal = a.total_damage?.total ? Number(a.total_damage.total) : 0;
+                bVal = b.total_damage?.total ? Number(b.total_damage.total) : 0;
                 break;
             case "totalDmgTaken":
-                aVal = Number(a.taken_damage) ||0;
-                bVal = Number(b.taken_damage) ||0;
+                aVal = Number(a.taken_damage) || 0;
+                bVal = Number(b.taken_damage) || 0;
                 break;
             case "totalHeal":
-                aVal = a.total_healing?.total ? Number(a.total_healing.total) :0;
-                bVal = b.total_healing?.total ? Number(b.total_healing.total) :0;
+                aVal = a.total_healing?.total
+                    ? Number(a.total_healing.total)
+                    : 0;
+                bVal = b.total_healing?.total
+                    ? Number(b.total_healing.total)
+                    : 0;
                 break;
             case "realtimeDps":
-                aVal = Number(a.total_dps) ||0;
-                bVal = Number(b.total_dps) ||0;
+                aVal = Number(a.total_dps) || 0;
+                bVal = Number(b.total_dps) || 0;
                 break;
             default:
-                aVal = a.total_damage?.total ? Number(a.total_damage.total) :0;
-                bVal = b.total_damage?.total ? Number(b.total_damage.total) :0;
+                aVal = a.total_damage?.total ? Number(a.total_damage.total) : 0;
+                bVal = b.total_damage?.total ? Number(b.total_damage.total) : 0;
         }
 
         return sortDirection === "asc" ? aVal - bVal : bVal - aVal;

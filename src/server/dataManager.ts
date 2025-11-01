@@ -4,7 +4,10 @@ import { readFileSync } from "fs";
 import type { Logger, GlobalSettings, SkillConfig } from "../types/index";
 
 // Use user data path in production, current directory in development
-const USER_DATA_DIR = process.env.NODE_ENV === "development" ? process.cwd() : process.env.USER_DATA_PATH;
+const USER_DATA_DIR =
+    process.env.NODE_ENV === "development"
+        ? process.cwd()
+        : process.env.USER_DATA_PATH;
 const TRANSLATIONS_DIR = path.join(__dirname, "translations");
 // Mutable translation stores so we can switch language at runtime
 let skillConfig: SkillConfig = {} as any;
@@ -252,7 +255,7 @@ export class StatisticData {
         }
         const totalPerSecond =
             (this.stats.total / (this.timeRange[1] - this.timeRange[0])) *
-            1000 || 0;
+                1000 || 0;
         if (!Number.isFinite(totalPerSecond)) return 0;
         return totalPerSecond;
     }
@@ -457,10 +460,15 @@ export class UserData {
         for (const [skillId, stat] of this.skillUsage) {
             const critCount = stat.count.critical;
             const luckyCount = stat.count.lucky;
-            const critRate = stat.count.total > 0 ? critCount / stat.count.total : 0;
-            const luckyRate = stat.count.total > 0 ? luckyCount / stat.count.total : 0;
+            const critRate =
+                stat.count.total > 0 ? critCount / stat.count.total : 0;
+            const luckyRate =
+                stat.count.total > 0 ? luckyCount / stat.count.total : 0;
             const skillConfigEntry = skillConfig[skillId % 1000000000];
-            const name = typeof skillConfigEntry === "string" ? skillConfigEntry : (skillConfigEntry?.name ?? skillId % 1000000000);
+            const name =
+                typeof skillConfigEntry === "string"
+                    ? skillConfigEntry
+                    : (skillConfigEntry?.name ?? skillId % 1000000000);
             const elementype = stat.element;
 
             skills[skillId % 1000000000] = {
@@ -646,18 +654,23 @@ export class UserDataManager {
             hpLessenValue,
         );
         // New: accumulate damage dealt to target enemy
-        if (typeof targetUid === "number" && targetUid >0) {
-            const prev = this.enemyTotals.get(targetUid) ||0;
-            const next = prev + (Number.isFinite(damage) ? damage :0);
+        if (typeof targetUid === "number" && targetUid > 0) {
+            const prev = this.enemyTotals.get(targetUid) || 0;
+            const next = prev + (Number.isFinite(damage) ? damage : 0);
             this.enemyTotals.set(targetUid, next);
             // Log once when combat against this enemy starts (first non-zero total)
-            if (prev ===0 && next >0) {
-                const name = this.getEnemyDisplayName(targetUid) || String(targetUid);
-                this.logger.info(`[ENCOUNTER-START] Enemy #${targetUid} (${name})`);
+            if (prev === 0 && next > 0) {
+                const name =
+                    this.getEnemyDisplayName(targetUid) || String(targetUid);
+                this.logger.info(
+                    `[ENCOUNTER-START] Enemy #${targetUid} (${name})`,
+                );
             }
             // Optional: debug log occasionally
-            if (next === damage || next - prev >=100000) {
-                this.logger.debug(`Enemy ${targetUid} total taken updated: ${next}`);
+            if (next === damage || next - prev >= 100000) {
+                this.logger.debug(
+                    `Enemy ${targetUid} total taken updated: ${next}`,
+                );
             }
         }
     }
@@ -794,13 +807,14 @@ export class UserDataManager {
             ...this.enemyCache.name.keys(),
             ...this.enemyCache.hp.keys(),
             ...this.enemyCache.maxHp.keys(),
-            ...(this.enemyCache.configId?.keys?.() || [] as any),
-            ...(this.enemyCache.reductionId?.keys?.() || [] as any),
-            ...(this.enemyCache.reductionLevel?.keys?.() || [] as any),
-            ...(this.enemyCache.type?.keys?.() || [] as any),
+            ...(this.enemyCache.configId?.keys?.() || ([] as any)),
+            ...(this.enemyCache.reductionId?.keys?.() || ([] as any)),
+            ...(this.enemyCache.reductionLevel?.keys?.() || ([] as any)),
+            ...(this.enemyCache.type?.keys?.() || ([] as any)),
             ...this.enemyTotals.keys(),
         ] as Iterable<string>);
-        const displayName = (idNum: number): string | undefined => this.getEnemyDisplayName(idNum);
+        const displayName = (idNum: number): string | undefined =>
+            this.getEnemyDisplayName(idNum);
         enemyIds.forEach((id) => {
             const numId = Number(id);
             result[id] = {
@@ -812,7 +826,7 @@ export class UserDataManager {
                 reductionLevel: this.enemyCache.reductionLevel?.get(id) ?? null,
                 type: this.enemyCache.type?.get(id) ?? null,
                 isBoss: this.enemyCache.isBoss?.get(id) ?? false,
-                stats: { total: this.enemyTotals.get(numId) ||0 },
+                stats: { total: this.enemyTotals.get(numId) || 0 },
             };
         });
         return result;
@@ -852,7 +866,9 @@ export class UserDataManager {
         this.enemyTotals = new Map();
         // Do not wipe enemy names/hp caches as they are metadata; keep them for display
         this.startTime = Date.now();
-        this.logger.info("Combat-only reset completed. Player attributes preserved.");
+        this.logger.info(
+            "Combat-only reset completed. Player attributes preserved.",
+        );
     }
 
     async resetStatistics(): Promise<void> {
@@ -989,7 +1005,7 @@ export class UserDataManager {
         //1) If not zh (e.g., en), prefer translated by config id first
         if (!wantZh && typeof cfgId === "number") {
             const trans = monsterMap[String(cfgId)];
-            if (trans && String(trans).trim().length >0) return trans;
+            if (trans && String(trans).trim().length > 0) return trans;
         }
 
         //2) If cached is meaningful non-numeric, optionally prefer it when zh or when no translation
@@ -999,7 +1015,7 @@ export class UserDataManager {
         //3) If zh preferred and have translation via config id, use it
         if (wantZh && typeof cfgId === "number") {
             const trans = monsterMap[String(cfgId)];
-            if (trans && String(trans).trim().length >0) return trans;
+            if (trans && String(trans).trim().length > 0) return trans;
         }
 
         //4) Custom overrides for certain entity ids
@@ -1011,7 +1027,7 @@ export class UserDataManager {
     // Expose translation lookup by monster config id for packet processor
     public getMonsterNameByConfigId(configId: number): string | undefined {
         const trans = monsterMap[String(configId)];
-        if (trans && String(trans).trim().length >0) return trans;
+        if (trans && String(trans).trim().length > 0) return trans;
         return undefined;
     }
 }

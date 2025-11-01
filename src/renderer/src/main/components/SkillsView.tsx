@@ -151,11 +151,7 @@ function SkillsViewComponent({
     t,
 }: SkillsViewProps): React.JSX.Element {
     if (!skillsData || Object.keys(skillsData).length === 0) {
-        return (
-            <div className="skills-message">
-                {t("ui.skills.noData")}
-            </div>
-        );
+        return <div className="skills-message">{t("ui.skills.noData")}</div>;
     }
 
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -175,15 +171,20 @@ function SkillsViewComponent({
     const search = searchTerm.trim().toLowerCase();
 
     const sortedUsers = useMemo(() => {
-        const entries = Object.entries(filteredSkillsData).filter(([uid, userData]: [string, any]) => {
-            if (!search) return true;
+        const entries = Object.entries(filteredSkillsData).filter(
+            ([uid, userData]: [string, any]) => {
+                if (!search) return true;
 
-            const uidMatch = uid.includes(search);
-            const name = getPlayerName(uid, userData.name || "").toLowerCase();
-            const nameMatch = name.includes(search);
+                const uidMatch = uid.includes(search);
+                const name = getPlayerName(
+                    uid,
+                    userData.name || "",
+                ).toLowerCase();
+                const nameMatch = name.includes(search);
 
-            return uidMatch || nameMatch;
-        });
+                return uidMatch || nameMatch;
+            },
+        );
 
         entries.sort((a: any, b: any) => {
             const aTotal = Object.values(a[1].skills || {}).reduce(
@@ -213,7 +214,11 @@ function SkillsViewComponent({
                         placeholder={t("ui.skills.searchPlaceholder")}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ border: "1px solid var(--border)", background: "var(--bg-dark)", color: "var(--text-primary)" }}
+                        style={{
+                            border: "1px solid var(--border)",
+                            background: "var(--bg-dark)",
+                            color: "var(--text-primary)",
+                        }}
                     />
                 </div>
             )}

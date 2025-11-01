@@ -11,7 +11,7 @@ export function GroupToggle({
     enabled,
     memberCount,
     onToggle,
-    t
+    t,
 }: GroupToggleProps): React.JSX.Element {
     return (
         <div className="group-toggle">
@@ -26,7 +26,8 @@ export function GroupToggle({
             </label>
             <div className="group-info">
                 <p id="group-member-count">
-                    {t("ui.group.currentGroupMembers")} <strong>{memberCount}</strong>
+                    {t("ui.group.currentGroupMembers")}{" "}
+                    <strong>{memberCount}</strong>
                 </p>
             </div>
         </div>

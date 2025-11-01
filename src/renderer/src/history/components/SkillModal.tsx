@@ -160,11 +160,12 @@ export function SkillModal({
             if (dmg <= 0) continue;
             // seeded pseudo-random based on skill id
             let seed = 0;
-            for (let i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+            for (let i = 0; i < id.length; i++)
+                seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
             // construct a wave pattern
             const amplitude = 0.2 + ((seed & 0xff) / 255) * 0.4; //0.2 -0.6 of average contribution
             const frequency = 1 + ((seed >> 8) & 3); //1..4 cycles
-            const phase = ((seed >> 11) & 0xff) / 255 * Math.PI * 2;
+            const phase = (((seed >> 11) & 0xff) / 255) * Math.PI * 2;
 
             // distribute skill damage across bins proportionally to wave weights
             const weights: number[] = [];
@@ -195,7 +196,8 @@ export function SkillModal({
 
     // Build pie slices for skill distribution (top N + others)
     const pieSlices = useMemo(() => {
-        if (!playerSkills || aggregates.totalDamage <= 0) return [] as PieSlice[];
+        if (!playerSkills || aggregates.totalDamage <= 0)
+            return [] as PieSlice[];
         const colors = [
             "#4A9EFF",
             "#5FC27E",
@@ -207,13 +209,22 @@ export function SkillModal({
             "#2ECC71",
         ];
         const entries = Object.entries(playerSkills.skills)
-            .map(([id, s]) => ({ id, name: translateSkill(id, s.displayName), value: s.totalDamage || 0 }))
+            .map(([id, s]) => ({
+                id,
+                name: translateSkill(id, s.displayName),
+                value: s.totalDamage || 0,
+            }))
             .filter((e) => e.value > 0)
             .sort((a, b) => b.value - a.value);
 
         const top = entries.slice(0, 7);
         const othersVal = entries.slice(7).reduce((acc, e) => acc + e.value, 0);
-        if (othersVal > 0) top.push({ id: "others", name: t("ui.misc.others", "Others"), value: othersVal });
+        if (othersVal > 0)
+            top.push({
+                id: "others",
+                name: t("ui.misc.others", "Others"),
+                value: othersVal,
+            });
 
         let angle = -Math.PI / 2; // start at top
         const total = top.reduce((acc, e) => acc + e.value, 0) || 1;
@@ -223,7 +234,14 @@ export function SkillModal({
             const startAngle = angle;
             const endAngle = angle + sweep;
             angle = endAngle;
-            slices.push({ id: e.id, name: e.name, value: e.value, startAngle, endAngle, color: colors[idx % colors.length] });
+            slices.push({
+                id: e.id,
+                name: e.name,
+                value: e.value,
+                startAngle,
+                endAngle,
+                color: colors[idx % colors.length],
+            });
         });
         return slices;
     }, [playerSkills, aggregates.totalDamage, translateSkill, t]);
@@ -255,15 +273,29 @@ export function SkillModal({
     const buildSparkPath = (pts: SparkPoint[]) => {
         if (pts.length === 0) return "";
         const [first, ...rest] = pts;
-        return `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ` + rest.map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+        return (
+            `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ` +
+            rest.map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ")
+        );
     };
 
-    const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => ({
+    const polarToCartesian = (
+        cx: number,
+        cy: number,
+        r: number,
+        angle: number,
+    ) => ({
         x: cx + r * Math.cos(angle),
         y: cy + r * Math.sin(angle),
     });
 
-    const buildArcPath = (cx: number, cy: number, r: number, start: number, end: number) => {
+    const buildArcPath = (
+        cx: number,
+        cy: number,
+        r: number,
+        start: number,
+        end: number,
+    ) => {
         const s = polarToCartesian(cx, cy, r, start);
         const e = polarToCartesian(cx, cy, r, end);
         const largeArc = end - start <= Math.PI ? 0 : 1;
@@ -342,7 +374,10 @@ export function SkillModal({
                     {isLoading ? (
                         <div className="loading-indicator">
                             <i className="fa-solid fa-spinner fa-spin"></i>
-                            {t("ui.messages.loadingSkills", "Loading skills...")}
+                            {t(
+                                "ui.messages.loadingSkills",
+                                "Loading skills...",
+                            )}
                         </div>
                     ) : playerSkills ? (
                         <div className="skill-breakdown">
@@ -389,10 +424,18 @@ export function SkillModal({
                                                     fontSize: 12,
                                                 }}
                                             >
-                                                {t("ui.skills.noData", "No Data")}
+                                                {t(
+                                                    "ui.skills.noData",
+                                                    "No Data",
+                                                )}
                                             </div>
                                         ) : (
-                                            <div style={{ display: "flex", gap: 10 }}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    gap: 10,
+                                                }}
+                                            >
                                                 <svg
                                                     width={120}
                                                     height={120}
@@ -423,7 +466,8 @@ export function SkillModal({
                                                             <span
                                                                 className="sb-dot"
                                                                 style={{
-                                                                    background: s.color,
+                                                                    background:
+                                                                        s.color,
                                                                 }}
                                                             />
                                                             <span
@@ -448,10 +492,15 @@ export function SkillModal({
                                     <div className="sb-card-metrics">
                                         <div>
                                             <span className="sb-k">
-                                                {t("ui.stats.totalDmg", "Total")}
+                                                {t(
+                                                    "ui.stats.totalDmg",
+                                                    "Total",
+                                                )}
                                             </span>
                                             <span className="sb-v">
-                                                {formatStat(aggregates.totalDamage)}
+                                                {formatStat(
+                                                    aggregates.totalDamage,
+                                                )}
                                             </span>
                                         </div>
                                         <div>
@@ -472,7 +521,10 @@ export function SkillModal({
                                         </div>
                                         <div>
                                             <span className="sb-k">
-                                                {t("ui.stats.critPercent", "Crit")}
+                                                {t(
+                                                    "ui.stats.critPercent",
+                                                    "Crit",
+                                                )}
                                             </span>
                                             <span className="sb-v">
                                                 {overallCritRate.toFixed(1)}%
@@ -480,7 +532,10 @@ export function SkillModal({
                                         </div>
                                         <div>
                                             <span className="sb-k">
-                                                {t("ui.stats.luckyPercent", "Lucky")}
+                                                {t(
+                                                    "ui.stats.luckyPercent",
+                                                    "Lucky",
+                                                )}
                                             </span>
                                             <span className="sb-v">
                                                 {overallLuckyRate.toFixed(1)}%
@@ -498,7 +553,9 @@ export function SkillModal({
                                         )}
                                     </div>
                                     <div className="sb-dist-row">
-                                        <span>{t("ui.stats.normal", "Normal")}</span>
+                                        <span>
+                                            {t("ui.stats.normal", "Normal")}
+                                        </span>
                                         <div className="sb-dist-bar">
                                             <div
                                                 className="sb-dist-fill normal"
@@ -512,11 +569,15 @@ export function SkillModal({
                                             ></div>
                                         </div>
                                         <span>
-                                            {formatStat(aggregates.normalDamage)}
+                                            {formatStat(
+                                                aggregates.normalDamage,
+                                            )}
                                         </span>
                                     </div>
                                     <div className="sb-dist-row">
-                                        <span>{t("ui.stats.crit", "Crit")}</span>
+                                        <span>
+                                            {t("ui.stats.crit", "Crit")}
+                                        </span>
                                         <div className="sb-dist-bar">
                                             <div
                                                 className="sb-dist-fill crit"
@@ -534,7 +595,9 @@ export function SkillModal({
                                         </span>
                                     </div>
                                     <div className="sb-dist-row">
-                                        <span>{t("ui.stats.lucky", "Lucky")}</span>
+                                        <span>
+                                            {t("ui.stats.lucky", "Lucky")}
+                                        </span>
                                         <div className="sb-dist-bar">
                                             <div
                                                 className="sb-dist-fill lucky"
@@ -553,7 +616,10 @@ export function SkillModal({
                                     </div>
                                     <div className="sb-dist-row">
                                         <span>
-                                            {t("ui.stats.critLucky", "Crit+Lucky")}
+                                            {t(
+                                                "ui.stats.critLucky",
+                                                "Crit+Lucky",
+                                            )}
                                         </span>
                                         <div className="sb-dist-bar">
                                             <div
@@ -568,7 +634,9 @@ export function SkillModal({
                                             ></div>
                                         </div>
                                         <span>
-                                            {formatStat(aggregates.critLuckyDamage)}
+                                            {formatStat(
+                                                aggregates.critLuckyDamage,
+                                            )}
                                         </span>
                                     </div>
                                 </div>
@@ -579,25 +647,60 @@ export function SkillModal({
                                     <thead>
                                         <tr>
                                             <th style={{ width: "36%" }}>
-                                                {t("ui.skills.skillName", "Skill Name")}
+                                                {t(
+                                                    "ui.skills.skillName",
+                                                    "Skill Name",
+                                                )}
                                             </th>
-                                            <th>{t("ui.stats.damage", "Damage")}</th>
-                                            <th>{t("ui.stats.dps", "Total DPS")}</th>
-                                            <th>{t("ui.skills.count", "Hit Count")}</th>
-                                            <th>{t("ui.stats.critPercent", "Crit Rate")}</th>
-                                            <th>{t("ui.stats.avgPerHit", "Avg Per Hit")}</th>
-                                            <th>{t("ui.stats.percentDmg", "Total DMG %")}</th>
+                                            <th>
+                                                {t("ui.stats.damage", "Damage")}
+                                            </th>
+                                            <th>
+                                                {t("ui.stats.dps", "Total DPS")}
+                                            </th>
+                                            <th>
+                                                {t(
+                                                    "ui.skills.count",
+                                                    "Hit Count",
+                                                )}
+                                            </th>
+                                            <th>
+                                                {t(
+                                                    "ui.stats.critPercent",
+                                                    "Crit Rate",
+                                                )}
+                                            </th>
+                                            <th>
+                                                {t(
+                                                    "ui.stats.avgPerHit",
+                                                    "Avg Per Hit",
+                                                )}
+                                            </th>
+                                            <th>
+                                                {t(
+                                                    "ui.stats.percentDmg",
+                                                    "Total DMG %",
+                                                )}
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {rows.map((r) => (
                                             <tr key={r.id}>
-                                                <td className="sb-skill-name">{r.name}</td>
+                                                <td className="sb-skill-name">
+                                                    {r.name}
+                                                </td>
                                                 <td>{formatStat(r.damage)}</td>
                                                 <td>{formatStat(r.dps)}</td>
-                                                <td>{r.hits.toLocaleString()}</td>
-                                                <td>{r.critRate.toFixed(2)}%</td>
-                                                <td>{formatStat(r.avgPerHit)}</td>
+                                                <td>
+                                                    {r.hits.toLocaleString()}
+                                                </td>
+                                                <td>
+                                                    {r.critRate.toFixed(2)}%
+                                                </td>
+                                                <td>
+                                                    {formatStat(r.avgPerHit)}
+                                                </td>
                                                 <td>{r.share.toFixed(1)}%</td>
                                             </tr>
                                         ))}

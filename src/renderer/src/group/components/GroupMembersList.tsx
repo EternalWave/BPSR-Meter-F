@@ -21,9 +21,11 @@ export function GroupMembersList({
     if (members.length === 0) {
         return (
             <div className="group-section">
-                <h4>{t("ui.titles.groupMembers","Group Members")}</h4>
+                <h4>{t("ui.titles.groupMembers", "Group Members")}</h4>
                 <div className="group-members-list">
-                    <div className="empty-state">{t("ui.messages.noMembersInGroup")}</div>
+                    <div className="empty-state">
+                        {t("ui.messages.noMembersInGroup")}
+                    </div>
                 </div>
             </div>
         );
@@ -31,7 +33,7 @@ export function GroupMembersList({
 
     return (
         <div className="group-section">
-            <h4>{t("ui.titles.groupMembers","Group Members")}</h4>
+            <h4>{t("ui.titles.groupMembers", "Group Members")}</h4>
             <div id="group-members-list" className="group-members-list">
                 {members.map((uuid) => {
                     // Find player in available players or use registry for name
@@ -64,9 +66,12 @@ export function GroupMembersList({
                             <button
                                 className="btn-remove"
                                 onClick={() => onRemoveMember(uuid)}
-                                title={t("ui.buttons.removeFromGroup","Remove from group")}
+                                title={t(
+                                    "ui.buttons.removeFromGroup",
+                                    "Remove from group",
+                                )}
                             >
-                                {t("ui.buttons.remove","Remove")}
+                                {t("ui.buttons.remove", "Remove")}
                             </button>
                         </div>
                     );

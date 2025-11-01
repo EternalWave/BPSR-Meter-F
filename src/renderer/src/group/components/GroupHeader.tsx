@@ -28,7 +28,9 @@ export function GroupHeader({
             </div>
 
             {/* Window Title */}
-            <span className="group-title">{t("ui.titles.groupManagement","Group Management")}</span>
+            <span className="group-title">
+                {t("ui.titles.groupManagement", "Group Management")}
+            </span>
 
             {/* Spacer */}
             <div style={{ flex: 1 }}></div>
@@ -38,7 +40,7 @@ export function GroupHeader({
                 id="group-zoom-out-btn"
                 className="control-button"
                 onClick={onZoomOut}
-                title={t("ui.buttons.zoomOut","Zoom out")}
+                title={t("ui.buttons.zoomOut", "Zoom out")}
             >
                 <i className="fa-solid fa-minus"></i>
             </button>
@@ -46,7 +48,7 @@ export function GroupHeader({
                 id="group-zoom-in-btn"
                 className="control-button"
                 onClick={onZoomIn}
-                title={t("ui.buttons.zoomIn","Zoom in")}
+                title={t("ui.buttons.zoomIn", "Zoom in")}
             >
                 <i className="fa-solid fa-plus"></i>
             </button>
@@ -56,7 +58,7 @@ export function GroupHeader({
                 id="group-close-button"
                 className="control-button"
                 onClick={onClose}
-                title={t("ui.buttons.close","Close")}
+                title={t("ui.buttons.close", "Close")}
             >
                 <i className="fa-solid fa-xmark"></i>
             </button>

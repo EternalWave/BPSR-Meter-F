@@ -52,7 +52,9 @@ export function HistoryControls({
                     className={`fa-solid fa-toggle-${isHistorySavingEnabled ? "on" : "off"}`}
                     style={{ marginRight: "6px" }}
                 ></i>
-                {isHistorySavingEnabled ? t("ui.messages.savingEnabled") : t("ui.buttons.enableSaving")}
+                {isHistorySavingEnabled
+                    ? t("ui.messages.savingEnabled")
+                    : t("ui.buttons.enableSaving")}
             </button>
         </div>
     );

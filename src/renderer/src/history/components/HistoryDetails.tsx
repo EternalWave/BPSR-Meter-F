@@ -70,7 +70,12 @@ export function HistoryDetails({
                             marginBottom: "12px",
                         }}
                     ></i>
-                    <p>{t("ui.messages.selectCombatSession", "Select a combat session from the list")}</p>
+                    <p>
+                        {t(
+                            "ui.messages.selectCombatSession",
+                            "Select a combat session from the list",
+                        )}
+                    </p>
                 </div>
             </div>
         );
@@ -102,7 +107,9 @@ export function HistoryDetails({
                     </div>
                     <div className="meta-item">
                         <i className="fa-solid fa-users"></i>
-                        <span>{summary.userCount} {t("ui.messages.players")}</span>
+                        <span>
+                            {summary.userCount} {t("ui.messages.players")}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -138,31 +145,41 @@ export function HistoryDetails({
                             </div>
                             <div className="player-stats">
                                 <div className="player-stat">
-                                            <span className="stat-label">{t("ui.stats.totalDmg")}</span>
+                                    <span className="stat-label">
+                                        {t("ui.stats.totalDmg")}
+                                    </span>
                                     <span className="stat-value">
                                         {formatStat(user.total_damage.total)}
                                     </span>
                                 </div>
                                 <div className="player-stat">
-                                            <span className="stat-label">{t("ui.stats.dps")}</span>
+                                    <span className="stat-label">
+                                        {t("ui.stats.dps")}
+                                    </span>
                                     <span className="stat-value">
                                         {formatStat(user.total_dps)}
                                     </span>
                                 </div>
                                 <div className="player-stat">
-                                            <span className="stat-label">{t("ui.skills.count","Hits")}</span>
+                                    <span className="stat-label">
+                                        {t("ui.skills.count", "Hits")}
+                                    </span>
                                     <span className="stat-value">
                                         {formatStat(user.total_count.total)}
                                     </span>
                                 </div>
                                 <div className="player-stat">
-                                            <span className="stat-label">{t("ui.skills.healing","Heals")}</span>
+                                    <span className="stat-label">
+                                        {t("ui.skills.healing", "Heals")}
+                                    </span>
                                     <span className="stat-value">
                                         {formatStat(user.total_healing.total)}
                                     </span>
                                 </div>
                                 <div className="player-stat">
-                                            <span className="stat-label">{t("ui.stats.percentDmg","Share")}</span>
+                                    <span className="stat-label">
+                                        {t("ui.stats.percentDmg", "Share")}
+                                    </span>
                                     <span className="stat-value">
                                         {percentage.toFixed(1)}%
                                     </span>
@@ -174,7 +191,7 @@ export function HistoryDetails({
                                     selectedTimestamp &&
                                     onViewSkills(selectedTimestamp, uid)
                                 }
-                                        title={t("ui.buttons.viewSkillBreakdown")}
+                                title={t("ui.buttons.viewSkillBreakdown")}
                             >
                                 <i className="fa-solid fa-chart-bar"></i>
                             </button>

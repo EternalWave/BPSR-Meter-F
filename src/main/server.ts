@@ -12,7 +12,10 @@ import Sniffer from "../../src/server/sniffer";
 import initializeApi from "../../src/server/api";
 import PacketProcessor from "../../algo/packet";
 
-const USER_DATA_DIR = process.env.NODE_ENV === "development" ? process.cwd() : process.env.USER_DATA_PATH;
+const USER_DATA_DIR =
+    process.env.NODE_ENV === "development"
+        ? process.cwd()
+        : process.env.USER_DATA_PATH;
 const SETTINGS_PATH = path.join(USER_DATA_DIR, "settings.json");
 const PLAYER_REGISTRY_PATH = path.join(USER_DATA_DIR, "player_registry.json");
 
@@ -120,9 +123,13 @@ async function main(): Promise<void> {
     }
 
     // Set log level: default to 'info' in development, 'error' in production. Allow override via LOG_LEVEL env.
-    const effectiveLevel = (process.env.LOG_LEVEL as string) || (process.env.NODE_ENV === "development" ? "info" : "error");
+    const effectiveLevel =
+        (process.env.LOG_LEVEL as string) ||
+        (process.env.NODE_ENV === "development" ? "info" : "error");
     logger.level = effectiveLevel as any;
-    console.log(`Logger level set to '${logger.level}' (NODE_ENV=${process.env.NODE_ENV || "unknown"})`);
+    console.log(
+        `Logger level set to '${logger.level}' (NODE_ENV=${process.env.NODE_ENV || "unknown"})`,
+    );
 
     process.on("SIGINT", async () => {
         console.log("\nClosing application...");

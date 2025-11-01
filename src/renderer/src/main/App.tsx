@@ -17,7 +17,9 @@ export function MainApp(): React.JSX.Element {
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
     const [showAllPlayers, setShowAllPlayers] = useState<boolean>(false);
     const [skillsScope, setSkillsScope] = useState<"solo" | "nearby">("nearby");
-    const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    const [visibleColumns, setVisibleColumns] = useState<
+        Record<string, boolean>
+    >({
         dps: true,
         hps: true,
         totalDmg: true,
@@ -41,14 +43,20 @@ export function MainApp(): React.JSX.Element {
                 }
             }
         } catch (err) {
-            console.warn("Failed to load visibleColumns from localStorage", err);
+            console.warn(
+                "Failed to load visibleColumns from localStorage",
+                err,
+            );
         }
     }, []);
 
     // Listen for changes made from other windows (settings) and update immediately
     useEffect(() => {
         const onStorage = (e: StorageEvent) => {
-            if (e.key === "visibleColumns" || e.key === "visibleColumnsUpdateMarker") {
+            if (
+                e.key === "visibleColumns" ||
+                e.key === "visibleColumnsUpdateMarker"
+            ) {
                 try {
                     const raw = localStorage.getItem("visibleColumns");
                     if (!raw) return;
@@ -57,7 +65,10 @@ export function MainApp(): React.JSX.Element {
                         setVisibleColumns((prev) => ({ ...prev, ...parsed }));
                     }
                 } catch (err) {
-                    console.warn("Failed to apply visibleColumns from storage", err);
+                    console.warn(
+                        "Failed to apply visibleColumns from storage",
+                        err,
+                    );
                 }
             }
         };
@@ -261,12 +272,21 @@ export function MainApp(): React.JSX.Element {
                 onZoomOut={zoomOut}
                 visibleColumns={visibleColumns}
                 onToggleColumn={(key: string) => {
-                    const newState = { ...visibleColumns, [key]: !visibleColumns[key] };
+                    const newState = {
+                        ...visibleColumns,
+                        [key]: !visibleColumns[key],
+                    };
                     setVisibleColumns(newState);
                     try {
-                        localStorage.setItem("visibleColumns", JSON.stringify(newState));
+                        localStorage.setItem(
+                            "visibleColumns",
+                            JSON.stringify(newState),
+                        );
                     } catch (e) {
-                        console.warn("Failed to persist visibleColumns to localStorage", e);
+                        console.warn(
+                            "Failed to persist visibleColumns to localStorage",
+                            e,
+                        );
                     }
                 }}
                 startTime={startTime}
@@ -293,7 +313,10 @@ export function MainApp(): React.JSX.Element {
                 <SkillsView
                     skillsData={
                         skillsScope === "solo" && localUid
-                            ? { [String(localUid)]: skillsData[String(localUid)] }
+                            ? {
+                                  [String(localUid)]:
+                                      skillsData[String(localUid)],
+                              }
                             : skillsData
                     }
                     startTime={startTime}

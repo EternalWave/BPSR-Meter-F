@@ -22,7 +22,9 @@ export function PlayerRegistrySection({
         const trimmedName = name.trim();
 
         if (!trimmedUid || !trimmedName) {
-            alert(t("ui.messages.enterUidName","Please enter both UID and Name"));
+            alert(
+                t("ui.messages.enterUidName", "Please enter both UID and Name"),
+            );
             return;
         }
 
@@ -43,14 +45,14 @@ export function PlayerRegistrySection({
 
     return (
         <div className="group-section">
-            <h4>{t("ui.titles.playerRegistry","Player Registry")}</h4>
+            <h4>{t("ui.titles.playerRegistry", "Player Registry")}</h4>
 
             {/* Registry Controls - Add New Player */}
             <div className="registry-controls">
                 <input
                     id="registry-uid-input"
                     type="text"
-                    placeholder={t("ui.placeholders.playerUid","Player UID")}
+                    placeholder={t("ui.placeholders.playerUid", "Player UID")}
                     value={uid}
                     onChange={(e) => setUid(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -67,7 +69,7 @@ export function PlayerRegistrySection({
                 <input
                     id="registry-name-input"
                     type="text"
-                    placeholder={t("ui.placeholders.playerName","Player Name")}
+                    placeholder={t("ui.placeholders.playerName", "Player Name")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -96,14 +98,20 @@ export function PlayerRegistrySection({
                         transition: "all var(--transition)",
                     }}
                 >
-                    {t("ui.buttons.save","Save")}
+                    {t("ui.buttons.save", "Save")}
                 </button>
             </div>
 
             {/* Registry List */}
-            <div id="registry-list" className="group-members-list" style={{ marginTop: "var(--gap-md)" }}>
+            <div
+                id="registry-list"
+                className="group-members-list"
+                style={{ marginTop: "var(--gap-md)" }}
+            >
                 {registryEntries.length === 0 ? (
-                    <div className="empty-state">{t("ui.messages.noSavedPlayers","No saved players")}</div>
+                    <div className="empty-state">
+                        {t("ui.messages.noSavedPlayers", "No saved players")}
+                    </div>
                 ) : (
                     registryEntries.map(([uuid, data]) => (
                         <div key={uuid} className="group-member-item">
@@ -116,9 +124,12 @@ export function PlayerRegistrySection({
                             <button
                                 className="btn-remove"
                                 onClick={() => onDeletePlayer(uuid)}
-                                title={t("ui.buttons.deleteFromRegistry","Delete from registry")}
+                                title={t(
+                                    "ui.buttons.deleteFromRegistry",
+                                    "Delete from registry",
+                                )}
                             >
-                                {t("ui.buttons.delete","Delete")}
+                                {t("ui.buttons.delete", "Delete")}
                             </button>
                         </div>
                     ))

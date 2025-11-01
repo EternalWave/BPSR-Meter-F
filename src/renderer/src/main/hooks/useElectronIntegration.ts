@@ -86,12 +86,18 @@ export function useElectronIntegration(
 
         const onMouseMove = (e: MouseEvent) => {
             if (!isLocked) return; // only when locked
-            const controls = document.querySelector('.controls') as HTMLElement | null;
+            const controls = document.querySelector(
+                ".controls",
+            ) as HTMLElement | null;
             if (!controls) return;
             const rect = controls.getBoundingClientRect();
             const x = e.clientX;
             const y = e.clientY;
-            const inside = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+            const inside =
+                x >= rect.left &&
+                x <= rect.right &&
+                y >= rect.top &&
+                y <= rect.bottom;
             if (inside) {
                 // Ensure UI is interactive over controls
                 enableMouseEvents(currentMouseEventsStateRef);
@@ -102,10 +108,12 @@ export function useElectronIntegration(
         };
 
         if (isLocked) {
-            window.addEventListener('mousemove', onMouseMove, { passive: true });
+            window.addEventListener("mousemove", onMouseMove, {
+                passive: true,
+            });
         }
         return () => {
-            window.removeEventListener('mousemove', onMouseMove as any);
+            window.removeEventListener("mousemove", onMouseMove as any);
         };
     }, [isLocked, isDragging, isScrolling]);
 
@@ -244,7 +252,7 @@ export function useElectronIntegration(
             }
 
             // Locked: only allow interactions when hovering the control bar
-            const allowed = (e.target as Element).closest('.controls') !== null;
+            const allowed = (e.target as Element).closest(".controls") !== null;
             if (allowed) {
                 enableMouseEvents(currentMouseEventsStateRef);
             }
@@ -259,7 +267,8 @@ export function useElectronIntegration(
                 const mouseX = e.clientX;
                 const mouseY = e.clientY;
                 const el = document.elementFromPoint(mouseX, mouseY);
-                const stillOverControls = !!el && el.closest('.controls') !== null;
+                const stillOverControls =
+                    !!el && el.closest(".controls") !== null;
                 if (!stillOverControls) {
                     disableMouseEvents(currentMouseEventsStateRef, isScrolling);
                 }

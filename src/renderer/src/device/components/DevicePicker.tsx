@@ -21,7 +21,9 @@ export function DevicePicker(): React.JSX.Element {
                 setLoading(false);
             }
         })();
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -63,12 +65,27 @@ export function DevicePicker(): React.JSX.Element {
                 <div>Loading devices...</div>
             ) : (
                 <div className="device-list">
-                    {devices.length === 0 && <div className="device-no-devices">No devices found. Ensure Npcap is installed.</div>}
+                    {devices.length === 0 && (
+                        <div className="device-no-devices">
+                            No devices found. Ensure Npcap is installed.
+                        </div>
+                    )}
                     {devices.map((d) => (
-                        <label key={d.id} className="device-item" onClick={() => handleSave(d.id)}>
-                            <input type="radio" name="device" checked={String(selected) === String(d.id)} onChange={() => handleSave(d.id)} />
+                        <label
+                            key={d.id}
+                            className="device-item"
+                            onClick={() => handleSave(d.id)}
+                        >
+                            <input
+                                type="radio"
+                                name="device"
+                                checked={String(selected) === String(d.id)}
+                                onChange={() => handleSave(d.id)}
+                            />
                             <div className="device-meta">
-                                <div className="device-name">{d.description || d.name}</div>
+                                <div className="device-name">
+                                    {d.description || d.name}
+                                </div>
                                 <div className="device-desc">{d.name}</div>
                             </div>
                         </label>

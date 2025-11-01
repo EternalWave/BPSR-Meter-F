@@ -97,7 +97,11 @@ class Sniffer {
     public running: boolean;
     #fragmentCleanerInterval: NodeJS.Timeout | null;
 
-    constructor(logger: Logger, userDataManager: UserDataManager, globalSettings: GlobalSettings) {
+    constructor(
+        logger: Logger,
+        userDataManager: UserDataManager,
+        globalSettings: GlobalSettings,
+    ) {
         this.logger = logger;
         this.userDataManager = userDataManager;
         this.globalSettings = globalSettings;
@@ -146,7 +150,7 @@ class Sniffer {
                     this.userDataManager &&
                         this.userDataManager.refreshEnemyCache &&
                         this.userDataManager.refreshEnemyCache();
-                } catch (e) { }
+                } catch (e) {}
                 this.logger.info(
                     "Sniffer resumed: detection state reset for faster server detection",
                 );
@@ -297,9 +301,9 @@ class Sniffer {
                                             this.globalSettings
                                                 .autoClearOnServerChange &&
                                             this.userDataManager.lastLogTime !==
-                                            0 &&
+                                                0 &&
                                             this.userDataManager.users.size !==
-                                            0
+                                                0
                                         ) {
                                             const lp =
                                                 this.globalSettings
@@ -325,13 +329,13 @@ class Sniffer {
                                                     null;
                                                 this.globalSettings.lastResumedAt =
                                                     null;
-                                            } catch (e) { }
+                                            } catch (e) {}
                                         }
                                         console.log(
                                             "Game server detected. Measuring DPS...",
                                         );
                                     }
-                                } catch (e) { }
+                                } catch (e) {}
                             } while (data1 && data1.length);
                         }
                     }
@@ -382,8 +386,9 @@ class Sniffer {
                                     // Reset pause/resume markers so they don't affect future checks
                                     try {
                                         this.globalSettings.lastPausedAt = null;
-                                        this.globalSettings.lastResumedAt = null;
-                                    } catch (e) { }
+                                        this.globalSettings.lastResumedAt =
+                                            null;
+                                    } catch (e) {}
                                 }
                                 console.log(
                                     "Game server detected by login packet. Measuring DPS...",
@@ -391,7 +396,7 @@ class Sniffer {
                             }
                         }
                     }
-                } catch (e) { }
+                } catch (e) {}
                 return;
             }
 
@@ -419,7 +424,11 @@ class Sniffer {
                 try {
                     if (buf.length > 4) {
                         const possibleLen = buf.readUInt32BE();
-                        if (possibleLen > 0 && possibleLen < 0x0fffff && buf.length >= possibleLen) {
+                        if (
+                            possibleLen > 0 &&
+                            possibleLen < 0x0fffff &&
+                            buf.length >= possibleLen
+                        ) {
                             // buffer looks like a full framed packet; assume this sequence is current
                             this.tcp_next_seq = tcpPacket.info.seqno;
                             this.logger.debug(
@@ -427,7 +436,8 @@ class Sniffer {
                             );
                         } else {
                             // fallback heuristic: assume next seq is seqno + buffer length
-                            this.tcp_next_seq = (tcpPacket.info.seqno + buf.length) >>> 0;
+                            this.tcp_next_seq =
+                                (tcpPacket.info.seqno + buf.length) >>> 0;
                             this.logger.debug(
                                 `Heuristic resync tcp_next_seq -> ${this.tcp_next_seq} (seqno=${tcpPacket.info.seqno}, bufLen=${buf.length})`,
                             );
@@ -440,7 +450,10 @@ class Sniffer {
                         );
                     }
                 } catch (e) {
-                    this.logger.warn("Failed to resync tcp_next_seq automatically:", e);
+                    this.logger.warn(
+                        "Failed to resync tcp_next_seq automatically:",
+                        e,
+                    );
                     // leave tcp_next_seq as -1 if resync failed
                 }
             }
@@ -487,7 +500,10 @@ class Sniffer {
         }
     }
 
-    async start(deviceNum: number | string, PacketProcessorClass: typeof PacketProcessor) {
+    async start(
+        deviceNum: number | string,
+        PacketProcessorClass: typeof PacketProcessor,
+    ) {
         const npcapReady = await checkAndInstallNpcap(this.logger);
 
         if (!npcapReady) {
@@ -532,7 +548,7 @@ class Sniffer {
         if (linkType !== "ETHERNET") {
             this.logger.error(
                 "The device seems to be WRONG! Please check the device! Device type: " +
-                linkType,
+                    linkType,
             );
         }
         this.capInstance.setMinBytes && this.capInstance.setMinBytes(0);
@@ -575,7 +591,7 @@ class Sniffer {
             ) {
                 this.logger.warn(
                     "Cannot capture the next packet! Is the game closed or disconnected? seq: " +
-                    this.tcp_next_seq,
+                        this.tcp_next_seq,
                 );
                 this.current_server = "";
                 this.clearTcpCache();
@@ -605,7 +621,10 @@ class Sniffer {
                 this.clearTcpCache();
                 this.PacketProcessor = null;
             } catch (e) {
-                this.logger.warn("Error while clearing sniffer internal state:", e);
+                this.logger.warn(
+                    "Error while clearing sniffer internal state:",
+                    e,
+                );
             }
 
             // Clear the fragment cleanup interval

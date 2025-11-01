@@ -9,14 +9,10 @@ export interface ClearGroupButtonProps {
 export function ClearGroupButton({
     onClearGroup,
     disabled = false,
-    t = (k: string, f?: string | null) => (f || k),
+    t = (k: string, f?: string | null) => f || k,
 }: ClearGroupButtonProps): React.JSX.Element {
     const handleClick = () => {
-        if (
-            window.confirm(
-                t("ui.messages.confirmClearGroup"),
-            )
-        ) {
+        if (window.confirm(t("ui.messages.confirmClearGroup"))) {
             onClearGroup();
         }
     };
