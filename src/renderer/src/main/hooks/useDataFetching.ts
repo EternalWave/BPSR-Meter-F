@@ -334,10 +334,10 @@ export function useDataFetching(
                 (u) => Number(u.total_damage?.total ||0) >0,
             );
 
-            // If none are active, show empty and keep loading spinner
+            // If none are active, show empty list but keep polling in background (no spinner)
             if (userArray.length ===0) {
                 setPlayers([]);
-                setIsLoading(true);
+                setIsLoading(false);
                 return;
             }
 
